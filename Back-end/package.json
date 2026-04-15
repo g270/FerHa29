@@ -17,6 +17,6 @@
     "msnodesqlv8": "^5.1.8",
     "sequelize": "^6.34.0",
     "sqlite3": "^6.0.1",
-    "tedious": "^14.0.0"
+    "tedious": "^19.2.1"
   }
 }
