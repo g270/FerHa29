@@ -30,7 +30,7 @@ import { Product } from '../../models/models';
           </div>
 
           <div class="product-info">
-            <div class="eyebrow">Producto destacado</div>
+            <div class="eyebrow">{{ isService(product) ? 'Servicio destacado' : 'Producto destacado' }}</div>
             <h1>{{ product.name }}</h1>
             <p class="description">{{ product.description }}</p>
 
@@ -62,12 +62,12 @@ import { Product } from '../../models/models';
               <span class="meta-chip" *ngIf="product.seller.businessAddress">{{ product.seller.businessAddress }}</span>
             </div>
 
-            <div class="stock" [class.out-of-stock]="product.stock === 0">
-              {{ product.stock === 0 ? 'Sin stock disponible' : 'Stock disponible: ' + product.stock }}
+            <div class="stock" [class.out-of-stock]="!isService(product) && product.stock === 0">
+              {{ getAvailabilityLabel(product) }}
             </div>
 
             <div class="purchase-box">
-              <div class="quantity-selector">
+              <div class="quantity-selector" *ngIf="!isService(product)">
                 <span>Cantidad</span>
                 <div class="quantity-controls">
                   <button type="button" (click)="decreaseQuantity()" [disabled]="quantity <= 1">-</button>
@@ -77,11 +77,11 @@ import { Product } from '../../models/models';
               </div>
 
               <div class="action-row">
-                <button class="btn-primary" type="button" (click)="addToCart()" [disabled]="product.stock === 0">
-                  Añadir al carrito
+                <button class="btn-primary" type="button" (click)="handlePrimaryAction()" [disabled]="isPrimaryActionDisabled()">
+                  {{ isService(product) ? 'Solicitar servicio' : 'Añadir al carrito' }}
                 </button>
                 <button class="btn-ghost" type="button" (click)="contactSeller()">
-                  Contactar al experto
+                  {{ isService(product) ? 'Ver negocio' : 'Contactar al experto' }}
                 </button>
               </div>
 
@@ -170,9 +170,41 @@ export class ProductDetailComponent implements OnInit {
       return;
     }
 
+    if (this.isService(this.product)) {
+      this.interactionType = 'info';
+      this.interactionMessage = `Coordina ${this.product.name} directamente con el proveedor desde su perfil comercial.`;
+      this.viewSellerProfile();
+      return;
+    }
+
     this.cartService.addToCart(this.product.id, this.quantity);
     this.interactionType = 'success';
     this.interactionMessage = `${this.product.name} fue añadido al carrito.`;
+  }
+
+  handlePrimaryAction(): void {
+    if (!this.product) {
+      return;
+    }
+
+    if (this.isService(this.product)) {
+      this.contactSeller();
+      return;
+    }
+
+    this.addToCart();
+  }
+
+  isPrimaryActionDisabled(): boolean {
+    if (!this.product) {
+      return true;
+    }
+
+    if (this.isService(this.product)) {
+      return !this.product.seller?.id || this.product.isActive === false;
+    }
+
+    return this.product.stock === 0;
   }
 
   increaseQuantity(): void {
@@ -207,6 +239,13 @@ export class ProductDetailComponent implements OnInit {
       return;
     }
 
+    if (this.isService(this.product)) {
+      this.interactionType = 'info';
+      this.interactionMessage = `Revisa el negocio del proveedor para coordinar ${this.product.name} y confirmar horario o cobertura.`;
+      this.viewSellerProfile();
+      return;
+    }
+
     this.interactionType = 'info';
     this.interactionMessage = `Puedes coordinar la compra de ${this.product.name} desde Mis pedidos o con los datos visibles del proveedor.`;
   }
@@ -229,6 +268,18 @@ export class ProductDetailComponent implements OnInit {
     }
 
     return 'Retiro';
+  }
+
+  getAvailabilityLabel(product: Product): string {
+    if (this.isService(product)) {
+      return 'Disponibilidad coordinada con el proveedor';
+    }
+
+    return product.stock === 0 ? 'Sin stock disponible' : 'Stock disponible: ' + product.stock;
+  }
+
+  isService(product: Product): boolean {
+    return (product.itemType || 'producto') === 'servicio';
   }
 
   private buildGalleryImages(imageUrl: string): string[] {

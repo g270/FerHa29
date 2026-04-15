@@ -127,7 +127,9 @@ import { Product } from '../../models/models';
             <div class="actions">
               <button class="btn-primary" type="button" (click)="viewProduct(product.id)">Ver detalle</button>
               <button class="btn-ghost" type="button" *ngIf="product.seller?.id" (click)="viewSeller(product.seller?.id)">Ver negocio</button>
-              <button class="btn-secondary" type="button" (click)="addToCart(product)" [disabled]="product.stock === 0 || product.isActive === false">Agregar al carrito</button>
+              <button class="btn-secondary" type="button" (click)="handlePrimaryAction(product)" [disabled]="isPrimaryActionDisabled(product)">
+                {{ getPrimaryActionLabel(product) }}
+              </button>
             </div>
             <p class="catalog-feedback success" *ngIf="feedbackProductId === product.id">{{ feedbackMessage }}</p>
           </div>
@@ -282,6 +284,33 @@ export class CatalogComponent implements OnInit {
     }
 
     this.router.navigate(['/seller', sellerId]);
+  }
+
+  getPrimaryActionLabel(product: Product): string {
+    if ((product.itemType || 'producto') === 'servicio') {
+      return 'Solicitar servicio';
+    }
+
+    return 'Agregar al carrito';
+  }
+
+  isPrimaryActionDisabled(product: Product): boolean {
+    if ((product.itemType || 'producto') === 'servicio') {
+      return !product.seller?.id || product.isActive === false;
+    }
+
+    return product.stock === 0 || product.isActive === false;
+  }
+
+  handlePrimaryAction(product: Product): void {
+    if ((product.itemType || 'producto') === 'servicio') {
+      this.feedbackProductId = product.id;
+      this.feedbackMessage = `Para coordinar ${product.name}, revisa el negocio del proveedor.`;
+      this.viewSeller(product.seller?.id);
+      return;
+    }
+
+    this.addToCart(product);
   }
 
   addToCart(product: Product): void {

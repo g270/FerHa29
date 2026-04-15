@@ -128,6 +128,10 @@ exports.createOrder = async (req, res, next) => {
         return res.status(400).json({ message: 'Uno o más productos no están disponibles para la venta' });
       }
 
+      if ((product.itemType || 'producto') === 'servicio') {
+        return res.status(400).json({ message: `El servicio ${product.name} debe coordinarse directamente con el proveedor y no puede comprarse desde el carrito` });
+      }
+
       if (Number(product.stock || 0) < requestedQuantity) {
         return res.status(400).json({ message: `Stock insuficiente para ${product.name}` });
       }

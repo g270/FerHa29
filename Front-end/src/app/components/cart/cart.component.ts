@@ -52,8 +52,9 @@ import { AuthService, CartService, OrderService, ProductService } from '../../se
               Antes: {{ item.product.price | number:'1.2-2' }}
             </span>
             <div class="meta-row">
-              <span class="meta-chip">Stock actual: {{ item.product.stock }}</span>
+              <span class="meta-chip">{{ item.product.itemType === 'servicio' ? 'Servicio coordinado con el proveedor' : 'Stock actual: ' + item.product.stock }}</span>
               <span class="meta-chip" *ngIf="item.product.deliveryType">Entrega: {{ getDeliveryLabel(item.product.deliveryType) }}</span>
+              <span class="meta-chip" *ngIf="item.product.itemType === 'servicio'">No disponible para checkout</span>
             </div>
           </div>
           <div *ngIf="!item.product" class="product-info unavailable-copy">
@@ -69,7 +70,7 @@ import { AuthService, CartService, OrderService, ProductService } from '../../se
               [(ngModel)]="item.quantity"
               min="1"
               [max]="item.product?.stock || null"
-              [disabled]="loading || !item.product || item.product.isActive === false || (item.product.stock || 0) === 0"
+              [disabled]="loading || !item.product || item.product.isActive === false || item.product.itemType === 'servicio' || (item.product.stock || 0) === 0"
               (change)="updateQuantity(item)"
             />
           </div>
@@ -87,7 +88,7 @@ import { AuthService, CartService, OrderService, ProductService } from '../../se
         <button class="btn-checkout" type="button" (click)="checkout()" [disabled]="loading || hasBlockingIssues()">
           {{ loading ? 'Procesando pedido...' : 'Proceder a comprar' }}
         </button>
-        <p class="status helper" *ngIf="hasBlockingIssues()">Corrige los productos marcados antes de continuar.</p>
+        <p class="status helper" *ngIf="hasBlockingIssues()">Corrige los elementos marcados antes de continuar. Los servicios deben coordinarse desde el negocio del proveedor.</p>
         <p class="status success" *ngIf="message">{{ message }}</p>
         <p class="status error" *ngIf="error">{{ error }}</p>
       </div>
@@ -326,6 +327,10 @@ export class CartComponent implements OnInit {
 
     if (item.product.isActive === false) {
       return 'Esta publicación está inactiva.';
+    }
+
+    if ((item.product.itemType || 'producto') === 'servicio') {
+      return 'Los servicios no se compran por carrito. Elimínalo y coordínalo desde el negocio del proveedor.';
     }
 
     if (item.product.stock <= 0) {
