@@ -26,6 +26,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    providerResponse: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    quotedPrice: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true
+    },
     status: {
       type: DataTypes.STRING,
       allowNull: false,

@@ -90,10 +90,18 @@ exports.createServiceRequest = async (req, res, next) => {
 
 exports.updateServiceRequestStatus = async (req, res, next) => {
   try {
-    const { status } = req.body;
+    const { status, providerResponse, quotedPrice } = req.body;
 
     if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({ message: 'El estado de la solicitud no es válido' });
+    }
+
+    const parsedQuotedPrice = quotedPrice === undefined || quotedPrice === null || quotedPrice === ''
+      ? null
+      : Number(quotedPrice);
+
+    if (parsedQuotedPrice !== null && (Number.isNaN(parsedQuotedPrice) || parsedQuotedPrice < 0)) {
+      return res.status(400).json({ message: 'El monto cotizado no es válido' });
     }
 
     const serviceRequest = await ServiceRequest.findByPk(req.params.id, {
@@ -109,6 +117,10 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
       if (!sellerProfile || serviceRequest.sellerId !== sellerProfile.id) {
         return res.status(403).json({ message: 'No puedes actualizar solicitudes de otro proveedor' });
       }
+
+      if (status === 'quoted' && parsedQuotedPrice === null) {
+        return res.status(400).json({ message: 'Debes indicar un monto cotizado para marcar la solicitud como cotizada' });
+      }
     } else if (req.userType === 'client') {
       if (serviceRequest.clientUserId !== req.userId || status !== 'cancelled') {
         return res.status(403).json({ message: 'Solo puedes cancelar tus propias solicitudes' });
@@ -117,7 +129,14 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
       return res.status(403).json({ message: 'No tienes permisos para actualizar esta solicitud' });
     }
 
-    await serviceRequest.update({ status });
+    const updatePayload = { status };
+
+    if (req.userType === 'seller') {
+      updatePayload.providerResponse = providerResponse?.trim() || null;
+      updatePayload.quotedPrice = parsedQuotedPrice;
+    }
+
+    await serviceRequest.update(updatePayload);
     res.json(serviceRequest);
   } catch (error) {
     next(error);

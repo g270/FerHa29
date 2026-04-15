@@ -11,7 +11,7 @@ import { ServiceRequest, ServiceRequestStatus, User } from '../../models/models'
         <div>
           <p class="eyebrow">{{ isSeller ? 'Panel de servicios' : 'Seguimiento de servicios' }}</p>
           <h1>{{ isSeller ? 'Solicitudes recibidas' : 'Mis solicitudes de servicio' }}</h1>
-          <p class="subtitle">{{ isSeller ? 'Gestiona el contacto inicial, la cotización y el cierre de cada solicitud.' : 'Consulta el estado de tus solicitudes y revisa el servicio solicitado.' }}</p>
+          <p class="subtitle">{{ isSeller ? 'Gestiona el contacto inicial, la cotización y el cierre de cada solicitud.' : 'Consulta el estado de tus solicitudes y revisa la respuesta del proveedor.' }}</p>
         </div>
       </div>
 
@@ -30,7 +30,11 @@ import { ServiceRequest, ServiceRequestStatus, User } from '../../models/models'
             </div>
             <div class="status-block">
               <ng-container *ngIf="isSeller; else readonlyStatus">
-                <select [ngModel]="request.status" (ngModelChange)="updateStatus(request, $event)" [disabled]="updatingId === request.id">
+                <select
+                  [ngModel]="responseDrafts[request.id].status || request.status"
+                  (ngModelChange)="responseDrafts[request.id].status = $event"
+                  [disabled]="updatingId === request.id"
+                >
                   <option *ngFor="let status of statusOptions" [value]="status">{{ getStatusLabel(status) }}</option>
                 </select>
               </ng-container>
@@ -43,7 +47,43 @@ import { ServiceRequest, ServiceRequestStatus, User } from '../../models/models'
           <div class="request-body">
             <p><strong>Solicitud:</strong> {{ request.message }}</p>
             <p *ngIf="request.preferredSchedule"><strong>Horario preferente:</strong> {{ request.preferredSchedule }}</p>
+
+            <div class="quote-box" *ngIf="request.providerResponse || request.quotedPrice != null">
+              <p *ngIf="request.providerResponse"><strong>Respuesta del proveedor:</strong> {{ request.providerResponse }}</p>
+              <p *ngIf="request.quotedPrice != null"><strong>Monto cotizado:</strong> {{ getQuotedPriceLabel(request) }}</p>
+            </div>
+
             <p><strong>Creada:</strong> {{ request.createdAt | date:'medium' }}</p>
+
+            <div class="seller-response-form" *ngIf="isSeller && responseDrafts[request.id]">
+              <label>
+                <span>Respuesta al cliente</span>
+                <textarea
+                  rows="4"
+                  [ngModel]="responseDrafts[request.id].providerResponse"
+                  (ngModelChange)="responseDrafts[request.id].providerResponse = $event"
+                  [ngModelOptions]="{ standalone: true }"
+                  placeholder="Ejemplo: puedo atenderte este sábado, incluye diagnóstico y seguimiento inicial"
+                ></textarea>
+              </label>
+
+              <label>
+                <span>Monto cotizado</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  [ngModel]="responseDrafts[request.id].quotedPrice"
+                  (ngModelChange)="responseDrafts[request.id].quotedPrice = toNullableNumber($event)"
+                  [ngModelOptions]="{ standalone: true }"
+                  placeholder="0.00"
+                />
+              </label>
+
+              <button type="button" class="btn-save" (click)="updateStatus(request)" [disabled]="updatingId === request.id">
+                {{ updatingId === request.id ? 'Guardando...' : 'Guardar respuesta' }}
+              </button>
+            </div>
           </div>
         </article>
       </div>
@@ -66,6 +106,7 @@ export class ServiceRequestsComponent implements OnInit {
   errorMessage = '';
   updatingId: string | null = null;
   currentUser: User | null = null;
+  responseDrafts: Record<string, { status: ServiceRequestStatus; providerResponse: string; quotedPrice: number | null }> = {};
 
   readonly statusOptions: ServiceRequestStatus[] = ['pending', 'contacted', 'quoted', 'closed', 'cancelled'];
 
@@ -89,6 +130,7 @@ export class ServiceRequestsComponent implements OnInit {
       next: (requests) => {
         this.requests = requests;
         this.filteredRequests = requests;
+        this.syncResponseDrafts();
         this.loading = false;
       },
       error: (err: { error?: { message?: string } }) => {
@@ -98,25 +140,48 @@ export class ServiceRequestsComponent implements OnInit {
     });
   }
 
-  updateStatus(request: ServiceRequest, status: ServiceRequestStatus): void {
-    if (!this.isSeller || request.status === status) {
+  updateStatus(request: ServiceRequest): void {
+    if (!this.isSeller) {
+      return;
+    }
+
+    const draft = this.responseDrafts[request.id];
+    if (!draft) {
       return;
     }
 
     const previousStatus = request.status;
-    request.status = status;
+    const previousResponse = request.providerResponse;
+    const previousQuotedPrice = request.quotedPrice;
+
+    request.status = draft.status;
+    request.providerResponse = draft.providerResponse.trim() || undefined;
+    request.quotedPrice = draft.quotedPrice ?? undefined;
     this.updatingId = request.id;
     this.message = '';
     this.errorMessage = '';
 
-    this.serviceRequestService.updateServiceRequestStatus(request.id, status).subscribe({
+    this.serviceRequestService.updateServiceRequestStatus(request.id, {
+      status: draft.status,
+      providerResponse: draft.providerResponse,
+      quotedPrice: draft.quotedPrice
+    }).subscribe({
       next: (updated) => {
         request.status = updated.status;
+        request.providerResponse = updated.providerResponse;
+        request.quotedPrice = updated.quotedPrice;
+        this.responseDrafts[request.id] = {
+          status: updated.status,
+          providerResponse: updated.providerResponse || '',
+          quotedPrice: updated.quotedPrice ?? null
+        };
         this.updatingId = null;
         this.message = `Solicitud #${request.id.slice(0, 8)} actualizada a ${this.getStatusLabel(updated.status)}.`;
       },
       error: (err: { error?: { message?: string } }) => {
         request.status = previousStatus;
+        request.providerResponse = previousResponse;
+        request.quotedPrice = previousQuotedPrice;
         this.updatingId = null;
         this.errorMessage = err.error?.message || 'No se pudo actualizar la solicitud.';
       }
@@ -140,6 +205,19 @@ export class ServiceRequestsComponent implements OnInit {
     }
   }
 
+  getQuotedPriceLabel(request: ServiceRequest): string {
+    return request.quotedPrice != null ? `$ ${Number(request.quotedPrice).toFixed(2)}` : 'Pendiente';
+  }
+
+  toNullableNumber(value: string | number | null): number | null {
+    if (value === '' || value === null) {
+      return null;
+    }
+
+    const parsedValue = Number(value);
+    return Number.isNaN(parsedValue) ? null : parsedValue;
+  }
+
   getClientLabel(request: ServiceRequest): string {
     const client = request.client;
     if (!client) {
@@ -148,5 +226,16 @@ export class ServiceRequestsComponent implements OnInit {
 
     const fullName = `${client.firstName || ''} ${client.lastName || ''}`.trim();
     return fullName || client.email;
+  }
+
+  private syncResponseDrafts(): void {
+    this.responseDrafts = this.requests.reduce((drafts, request) => {
+      drafts[request.id] = {
+        status: request.status,
+        providerResponse: request.providerResponse || '',
+        quotedPrice: request.quotedPrice ?? null
+      };
+      return drafts;
+    }, {} as Record<string, { status: ServiceRequestStatus; providerResponse: string; quotedPrice: number | null }>);
   }
 }

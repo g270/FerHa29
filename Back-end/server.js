@@ -146,6 +146,34 @@ async function ensureSellerColumns() {
   }
 }
 
+async function ensureServiceRequestColumns() {
+  const queryInterface = sequelize.getQueryInterface();
+  const serviceRequestTable = await queryInterface.describeTable('ServiceRequests');
+
+  const columnsToAdd = [
+    {
+      name: 'providerResponse',
+      definition: {
+        type: Sequelize.DataTypes.TEXT,
+        allowNull: true
+      }
+    },
+    {
+      name: 'quotedPrice',
+      definition: {
+        type: Sequelize.DataTypes.DECIMAL(10, 2),
+        allowNull: true
+      }
+    }
+  ];
+
+  for (const column of columnsToAdd) {
+    if (!serviceRequestTable[column.name]) {
+      await queryInterface.addColumn('ServiceRequests', column.name, column.definition);
+    }
+  }
+}
+
 async function ensureDatabaseExists() {
   if (process.env.NODE_ENV === 'development') {
     return;
@@ -206,6 +234,9 @@ async function startServer() {
 
     await ensureSellerColumns();
     console.log('Columnas extendidas del perfil de negocio verificadas correctamente');
+
+    await ensureServiceRequestColumns();
+    console.log('Columnas extendidas de solicitudes de servicio verificadas correctamente');
 
     await ensureDefaultCategories();
     console.log('Categorias base verificadas correctamente');

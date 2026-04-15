@@ -90,6 +90,8 @@ export interface ServiceRequest {
   productId: string;
   message: string;
   preferredSchedule?: string;
+  providerResponse?: string;
+  quotedPrice?: number;
   status: ServiceRequestStatus;
   createdAt?: string;
   updatedAt?: string;
@@ -102,6 +104,12 @@ export interface CreateServiceRequestPayload {
   productId: string;
   message: string;
   preferredSchedule?: string;
+}
+
+export interface UpdateServiceRequestPayload {
+  status: ServiceRequestStatus;
+  providerResponse?: string;
+  quotedPrice?: number | null;
 }
 
 export interface User {

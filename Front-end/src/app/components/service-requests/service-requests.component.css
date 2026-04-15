@@ -75,6 +75,56 @@
   margin: 0.35rem 0;
 }
 
+.quote-box {
+  margin-top: 0.85rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.seller-response-form {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.seller-response-form label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.seller-response-form span {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.seller-response-form textarea,
+.seller-response-form input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem;
+  font: inherit;
+}
+
+.btn-save {
+  width: fit-content;
+  border: 0;
+  border-radius: 999px;
+  background: #0f766e;
+  color: #fff;
+  font-weight: 800;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+}
+
+.btn-save:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
 .feedback {
   margin: 0;
   font-weight: 700;
