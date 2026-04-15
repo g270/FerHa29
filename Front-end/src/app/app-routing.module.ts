@@ -12,6 +12,7 @@ import { RegisterComponent } from './components/register/register.component';
 import { SellerProductFormComponent } from './components/seller-product-form/seller-product-form.component';
 import { OrderConfirmationComponent } from './components/order-confirmation/order-confirmation.component';
 import { SellerProfileComponent } from './components/seller-profile/seller-profile.component';
+import { NotificationsComponent } from './components/notifications/notifications.component';
 import { ServiceRequestFormComponent } from './components/service-request-form/service-request-form.component';
 import { ServiceRequestsComponent } from './components/service-requests/service-requests.component';
 import { AuthGuard } from './guards/auth.guard';
@@ -24,6 +25,7 @@ const routes: Routes = [
   { path: 'seller/:id', component: SellerProfileComponent },
   { path: 'services/request/:id', component: ServiceRequestFormComponent, canActivate: [AuthGuard] },
   { path: 'service-requests', component: ServiceRequestsComponent, canActivate: [AuthGuard] },
+  { path: 'notifications', component: NotificationsComponent, canActivate: [AuthGuard] },
   { path: 'cart', component: CartComponent },
   { path: 'orders', component: OrdersComponent, canActivate: [AuthGuard] },
   { path: 'orders/:id/confirmation', component: OrderConfirmationComponent, canActivate: [AuthGuard] },

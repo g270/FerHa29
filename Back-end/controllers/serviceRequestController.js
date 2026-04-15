@@ -1,8 +1,9 @@
-const { Product, Seller, ServiceRequest, User } = require('../models');
+const { Notification, Product, Seller, ServiceRequest, User } = require('../models');
 
 const clientAttributes = ['id', 'email', 'firstName', 'lastName', 'phone', 'address', 'userType', 'createdAt', 'updatedAt'];
 const sellerAttributes = ['id', 'businessName', 'description', 'logoUrl', 'hasHomeDelivery', 'hasPhysicalStore', 'businessAddress', 'businessHours', 'businessNotes', 'rating', 'isVerified'];
 const validStatuses = ['pending', 'contacted', 'quoted', 'accepted', 'rejected', 'closed', 'cancelled'];
+const serviceRequestLink = '/service-requests';
 
 const buildInclude = () => ([
   {
@@ -15,6 +16,98 @@ const buildInclude = () => ([
 ]);
 
 const getSellerProfile = async (userId) => Seller.findOne({ where: { userId } });
+
+const getUserLabel = (user) => {
+  if (!user) {
+    return 'Un usuario';
+  }
+
+  const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+  return fullName || user.email || 'Un usuario';
+};
+
+const getServiceLabel = (serviceRequest) => serviceRequest.product?.name || 'tu servicio';
+
+const createNotification = async ({ userId, title, message }) => {
+  if (!userId) {
+    return;
+  }
+
+  await Notification.create({
+    userId,
+    title,
+    message,
+    link: serviceRequestLink
+  });
+};
+
+const notifySellerAboutNewRequest = async (serviceRequest) => {
+  const seller = await Seller.findByPk(serviceRequest.sellerId);
+
+  await createNotification({
+    userId: seller?.userId,
+    title: 'Nueva solicitud de servicio',
+    message: `${getUserLabel(serviceRequest.client)} te envió una solicitud sobre ${getServiceLabel(serviceRequest)}.`
+  });
+};
+
+const notifyClientAboutSellerUpdate = async (serviceRequest, previousStatus) => {
+  const sellerName = serviceRequest.seller?.businessName || 'El proveedor';
+  const serviceLabel = getServiceLabel(serviceRequest);
+  const statusChanged = previousStatus !== serviceRequest.status;
+
+  let title = 'Actualización en tu solicitud';
+  let message = `${sellerName} actualizó tu solicitud de ${serviceLabel}.`;
+
+  if (serviceRequest.status === 'quoted') {
+    title = 'Cotización disponible';
+    message = `${sellerName} cotizó tu solicitud de ${serviceLabel}${serviceRequest.quotedPrice != null ? ` por $ ${Number(serviceRequest.quotedPrice).toFixed(2)}` : ''}.`;
+  } else if (serviceRequest.status === 'contacted') {
+    title = 'Proveedor en contacto';
+    message = `${sellerName} respondió tu solicitud de ${serviceLabel}.`;
+  } else if (serviceRequest.status === 'closed') {
+    title = 'Solicitud cerrada';
+    message = `${sellerName} cerró la solicitud de ${serviceLabel}.`;
+  } else if (serviceRequest.status === 'cancelled') {
+    title = 'Solicitud cancelada';
+    message = `${sellerName} canceló la solicitud de ${serviceLabel}.`;
+  } else if (!statusChanged) {
+    title = 'Nueva respuesta del proveedor';
+    message = `${sellerName} actualizó la respuesta de tu solicitud de ${serviceLabel}.`;
+  }
+
+  await createNotification({
+    userId: serviceRequest.clientUserId,
+    title,
+    message
+  });
+};
+
+const notifySellerAboutClientDecision = async (serviceRequest) => {
+  const seller = await Seller.findByPk(serviceRequest.sellerId);
+  const clientLabel = getUserLabel(serviceRequest.client);
+  const serviceLabel = getServiceLabel(serviceRequest);
+
+  let title = 'Solicitud actualizada';
+  let message = `${clientLabel} actualizó la solicitud de ${serviceLabel}.`;
+
+  if (serviceRequest.status === 'accepted') {
+    title = 'Cotización aceptada';
+    message = `${clientLabel} aceptó la cotización de ${serviceLabel}.`;
+  } else if (serviceRequest.status === 'rejected') {
+    title = 'Cotización rechazada';
+    message = `${clientLabel} rechazó la cotización de ${serviceLabel}.`;
+  } else if (serviceRequest.status === 'cancelled') {
+    title = 'Solicitud cancelada';
+    message = `${clientLabel} canceló la solicitud de ${serviceLabel}.`;
+  }
+
+  await createNotification({
+    userId: seller?.userId,
+    title,
+    message
+  });
+};
 
 exports.listServiceRequests = async (req, res, next) => {
   try {
@@ -82,6 +175,8 @@ exports.createServiceRequest = async (req, res, next) => {
       include: buildInclude()
     });
 
+    await notifySellerAboutNewRequest(createdRequest);
+
     res.status(201).json(createdRequest);
   } catch (error) {
     next(error);
@@ -142,6 +237,9 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
       return res.status(403).json({ message: 'No tienes permisos para actualizar esta solicitud' });
     }
 
+    const previousStatus = serviceRequest.status;
+    const previousResponse = serviceRequest.providerResponse;
+    const previousQuotedPrice = serviceRequest.quotedPrice;
     const updatePayload = { status };
 
     if (req.userType === 'seller') {
@@ -150,6 +248,21 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
     }
 
     await serviceRequest.update(updatePayload);
+
+    const shouldNotifyClient = req.userType === 'seller' && (
+      previousStatus !== serviceRequest.status
+      || previousResponse !== serviceRequest.providerResponse
+      || Number(previousQuotedPrice || 0) !== Number(serviceRequest.quotedPrice || 0)
+    );
+
+    if (shouldNotifyClient) {
+      await notifyClientAboutSellerUpdate(serviceRequest, previousStatus);
+    }
+
+    if (req.userType === 'client' && previousStatus !== serviceRequest.status) {
+      await notifySellerAboutClientDecision(serviceRequest);
+    }
+
     res.json(serviceRequest);
   } catch (error) {
     next(error);

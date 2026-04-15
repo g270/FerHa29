@@ -15,6 +15,7 @@ import { RegisterComponent } from './components/register/register.component';
 import { SellerProductFormComponent } from './components/seller-product-form/seller-product-form.component';
 import { OrderConfirmationComponent } from './components/order-confirmation/order-confirmation.component';
 import { SellerProfileComponent } from './components/seller-profile/seller-profile.component';
+import { NotificationsComponent } from './components/notifications/notifications.component';
 import { ServiceRequestFormComponent } from './components/service-request-form/service-request-form.component';
 import { ServiceRequestsComponent } from './components/service-requests/service-requests.component';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
@@ -32,6 +33,7 @@ import { AuthInterceptor } from './interceptors/auth.interceptor';
     SellerProductFormComponent,
     OrderConfirmationComponent,
     SellerProfileComponent,
+    NotificationsComponent,
     ServiceRequestFormComponent,
     ServiceRequestsComponent
   ],

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, map, tap } from 'rxjs';
-import { AuthResponse, CartItem, Category, CreateOrderPayload, CreateServiceRequestPayload, Order, Product, Seller, ServiceRequest, UpdateServiceRequestPayload, User } from '../models/models';
+import { AppNotification, AuthResponse, CartItem, Category, CreateOrderPayload, CreateServiceRequestPayload, NotificationResponse, Order, Product, Seller, ServiceRequest, UpdateServiceRequestPayload, User } from '../models/models';
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -170,6 +170,55 @@ export class ServiceRequestService {
 
   updateServiceRequestStatus(id: string, payload: UpdateServiceRequestPayload): Observable<ServiceRequest> {
     return this.http.put<ServiceRequest>(`${API_URL}/service-requests/${id}/status`, payload);
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class NotificationService {
+  private readonly notificationsSubject = new BehaviorSubject<AppNotification[]>([]);
+  private readonly unreadCountSubject = new BehaviorSubject<number>(0);
+
+  notifications$ = this.notificationsSubject.asObservable();
+  unreadCount$ = this.unreadCountSubject.asObservable();
+
+  constructor(private http: HttpClient) {}
+
+  getNotifications(limit = 25): Observable<NotificationResponse> {
+    return this.http.get<NotificationResponse>(`${API_URL}/notifications?limit=${limit}`).pipe(
+      tap((response) => this.setNotificationState(response))
+    );
+  }
+
+  markAsRead(id: string): Observable<AppNotification> {
+    return this.http.put<AppNotification>(`${API_URL}/notifications/${id}/read`, {}).pipe(
+      tap((notification) => {
+        const updatedItems = this.notificationsSubject.value.map((item) =>
+          item.id === notification.id ? notification : item
+        );
+        this.notificationsSubject.next(updatedItems);
+        this.unreadCountSubject.next(updatedItems.filter((item) => !item.isRead).length);
+      })
+    );
+  }
+
+  markAllAsRead(): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(`${API_URL}/notifications/read-all`, {}).pipe(
+      tap(() => {
+        const updatedItems = this.notificationsSubject.value.map((item) => ({ ...item, isRead: true }));
+        this.notificationsSubject.next(updatedItems);
+        this.unreadCountSubject.next(0);
+      })
+    );
+  }
+
+  clear(): void {
+    this.notificationsSubject.next([]);
+    this.unreadCountSubject.next(0);
+  }
+
+  private setNotificationState(response: NotificationResponse): void {
+    this.notificationsSubject.next(response.items);
+    this.unreadCountSubject.next(response.unreadCount);
   }
 }
 

@@ -10,6 +10,12 @@
     </li>
     <li *ngIf="isAuthenticated"><a routerLink="/orders">{{ isSeller ? 'Ventas' : 'Mis Pedidos' }}</a></li>
     <li *ngIf="isAuthenticated"><a routerLink="/service-requests">{{ isSeller ? 'Solicitudes' : 'Mis Solicitudes' }}</a></li>
+    <li *ngIf="isAuthenticated">
+      <a routerLink="/notifications" class="notification-link">
+        Notificaciones
+        <span class="notification-count" *ngIf="unreadNotifications > 0">{{ unreadNotifications }}</span>
+      </a>
+    </li>
     <li *ngIf="isAuthenticated"><a routerLink="/dashboard">{{ isSeller ? 'Mi Negocio' : 'Perfil' }}</a></li>
     <li *ngIf="isAuthenticated && isSeller"><a routerLink="/seller/products/new">Publicar</a></li>
     <li *ngIf="!isAuthenticated"><a routerLink="/login">Login</a></li>

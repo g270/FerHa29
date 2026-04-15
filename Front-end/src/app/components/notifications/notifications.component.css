@@ -1,0 +1,123 @@
+.notifications-page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-morado);
+}
+
+.page-header h1 {
+  margin: 0;
+}
+
+.subtitle {
+  margin: 0.6rem 0 0;
+  color: #475569;
+}
+
+.mark-all,
+.open-link,
+.mark-one {
+  border: 0;
+  border-radius: 0.9rem;
+  padding: 0.8rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mark-all,
+.open-link {
+  background: var(--color-morado);
+  color: var(--color-blanco);
+}
+
+.mark-one {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.mark-all:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.notification-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.notification-card {
+  border-left: 4px solid transparent;
+}
+
+.notification-card.unread {
+  border-left-color: #facc15;
+  background: #fffdf0;
+}
+
+.notification-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.notification-head h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.notification-date {
+  margin: 0.4rem 0 0;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.notification-message {
+  margin: 1rem 0;
+  color: #1f2937;
+  line-height: 1.5;
+}
+
+.notification-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.unread-pill {
+  background: #facc15;
+  color: #422006;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.state,
+.empty-panel {
+  text-align: center;
+}
+
+.state.error {
+  color: #b91c1c;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+  }
+}

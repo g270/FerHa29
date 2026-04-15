@@ -40,6 +40,11 @@
   align-items: center;
   gap: 0.5rem;
 }
+.notification-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
 .cart-count {
   min-width: 1.45rem;
   height: 1.45rem;
@@ -48,6 +53,18 @@
   align-items: center;
   justify-content: center;
   background: var(--color-verde);
+  color: var(--color-morado);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.notification-count {
+  min-width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #facc15;
   color: var(--color-morado);
   font-size: 0.8rem;
   font-weight: 800;
@@ -72,4 +89,16 @@
   font-size: 1.1rem;
   letter-spacing: 0.5px;
   border-top: 4px solid var(--color-verde);
+}
+
+@media (max-width: 900px) {
+  .navbar {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .navbar ul {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 }

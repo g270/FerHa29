@@ -112,6 +112,22 @@ export interface UpdateServiceRequestPayload {
   quotedPrice?: number | null;
 }
 
+export interface AppNotification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  link?: string;
+  isRead: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface NotificationResponse {
+  items: AppNotification[];
+  unreadCount: number;
+}
+
 export interface User {
   id: string;
   email: string;

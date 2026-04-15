@@ -8,6 +8,7 @@ const Product = require('./Product')(sequelize, Sequelize.DataTypes);
 const Order = require('./Order')(sequelize, Sequelize.DataTypes);
 const OrderItem = require('./OrderItem')(sequelize, Sequelize.DataTypes);
 const ServiceRequest = require('./ServiceRequest')(sequelize, Sequelize.DataTypes);
+const Notification = require('./Notification')(sequelize, Sequelize.DataTypes);
 
 User.hasOne(Seller, { foreignKey: 'userId', as: 'sellerProfile' });
 Seller.belongsTo(User, { foreignKey: 'userId', as: 'user' });
@@ -27,6 +28,8 @@ Seller.hasMany(ServiceRequest, { foreignKey: 'sellerId', as: 'serviceRequests', 
 ServiceRequest.belongsTo(Seller, { foreignKey: 'sellerId', as: 'seller', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
 Product.hasMany(ServiceRequest, { foreignKey: 'productId', as: 'serviceRequests', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
 ServiceRequest.belongsTo(Product, { foreignKey: 'productId', as: 'product', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
+User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications', onDelete: 'CASCADE', onUpdate: 'CASCADE' });
+Notification.belongsTo(User, { foreignKey: 'userId', as: 'user', onDelete: 'CASCADE', onUpdate: 'CASCADE' });
 
 module.exports = {
   sequelize,
@@ -37,5 +40,6 @@ module.exports = {
   Product,
   Order,
   OrderItem,
-  ServiceRequest
+  ServiceRequest,
+  Notification
 };
