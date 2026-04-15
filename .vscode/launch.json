@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "pwa-node",
+      "request": "launch",
+      "name": "Run Backend (Node)",
+      "program": "${workspaceFolder}/Back-end/server.js",
+      "cwd": "${workspaceFolder}/Back-end",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/Back-end/.env"
+    },
+    {
+      "type": "pwa-node",
+      "request": "launch",
+      "name": "Run Frontend (Angular)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start"],
+      "cwd": "${workspaceFolder}/Front-end",
+      "console": "integratedTerminal"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Run Backend + Frontend",
+      "configurations": [
+        "Run Backend (Node)",
+        "Run Frontend (Angular)"
+      ]
+    }
+  ]
+}
