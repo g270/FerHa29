@@ -2,7 +2,7 @@ const { Product, Seller, ServiceRequest, User } = require('../models');
 
 const clientAttributes = ['id', 'email', 'firstName', 'lastName', 'phone', 'address', 'userType', 'createdAt', 'updatedAt'];
 const sellerAttributes = ['id', 'businessName', 'description', 'logoUrl', 'hasHomeDelivery', 'hasPhysicalStore', 'businessAddress', 'businessHours', 'businessNotes', 'rating', 'isVerified'];
-const validStatuses = ['pending', 'contacted', 'quoted', 'closed', 'cancelled'];
+const validStatuses = ['pending', 'contacted', 'quoted', 'accepted', 'rejected', 'closed', 'cancelled'];
 
 const buildInclude = () => ([
   {
@@ -121,9 +121,22 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
       if (status === 'quoted' && parsedQuotedPrice === null) {
         return res.status(400).json({ message: 'Debes indicar un monto cotizado para marcar la solicitud como cotizada' });
       }
+
+      if (['accepted', 'rejected'].includes(status)) {
+        return res.status(403).json({ message: 'La aceptación o rechazo de la cotización corresponde al cliente' });
+      }
     } else if (req.userType === 'client') {
-      if (serviceRequest.clientUserId !== req.userId || status !== 'cancelled') {
-        return res.status(403).json({ message: 'Solo puedes cancelar tus propias solicitudes' });
+      if (serviceRequest.clientUserId !== req.userId) {
+        return res.status(403).json({ message: 'Solo puedes actualizar tus propias solicitudes' });
+      }
+
+      const allowedClientStatuses = ['cancelled', 'accepted', 'rejected'];
+      if (!allowedClientStatuses.includes(status)) {
+        return res.status(403).json({ message: 'No tienes permisos para aplicar ese cambio de estado' });
+      }
+
+      if (['accepted', 'rejected'].includes(status) && serviceRequest.status !== 'quoted') {
+        return res.status(400).json({ message: 'Solo puedes aceptar o rechazar una solicitud que ya fue cotizada' });
       }
     } else if (req.userType !== 'admin') {
       return res.status(403).json({ message: 'No tienes permisos para actualizar esta solicitud' });

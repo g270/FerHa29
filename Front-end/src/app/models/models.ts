@@ -36,7 +36,7 @@ export interface Seller {
   products?: Product[];
 }
 
-export type ServiceRequestStatus = 'pending' | 'contacted' | 'quoted' | 'closed' | 'cancelled';
+export type ServiceRequestStatus = 'pending' | 'contacted' | 'quoted' | 'accepted' | 'rejected' | 'closed' | 'cancelled';
 
 export interface Category {
   id: string;

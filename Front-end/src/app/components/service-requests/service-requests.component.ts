@@ -11,7 +11,7 @@ import { ServiceRequest, ServiceRequestStatus, User } from '../../models/models'
         <div>
           <p class="eyebrow">{{ isSeller ? 'Panel de servicios' : 'Seguimiento de servicios' }}</p>
           <h1>{{ isSeller ? 'Solicitudes recibidas' : 'Mis solicitudes de servicio' }}</h1>
-          <p class="subtitle">{{ isSeller ? 'Gestiona el contacto inicial, la cotización y el cierre de cada solicitud.' : 'Consulta el estado de tus solicitudes y revisa la respuesta del proveedor.' }}</p>
+          <p class="subtitle">{{ isSeller ? 'Gestiona el contacto inicial, la cotización y el cierre de cada solicitud.' : 'Consulta el estado de tus solicitudes, revisa la respuesta del proveedor y decide si aceptas la cotización.' }}</p>
         </div>
       </div>
 
@@ -54,6 +54,15 @@ import { ServiceRequest, ServiceRequestStatus, User } from '../../models/models'
             </div>
 
             <p><strong>Creada:</strong> {{ request.createdAt | date:'medium' }}</p>
+
+            <div class="client-decision" *ngIf="!isSeller && request.status === 'quoted'">
+              <button type="button" class="btn-accept" (click)="updateClientDecision(request, 'accepted')" [disabled]="updatingId === request.id">
+                {{ updatingId === request.id ? 'Procesando...' : 'Aceptar cotización' }}
+              </button>
+              <button type="button" class="btn-reject" (click)="updateClientDecision(request, 'rejected')" [disabled]="updatingId === request.id">
+                {{ updatingId === request.id ? 'Procesando...' : 'Rechazar cotización' }}
+              </button>
+            </div>
 
             <div class="seller-response-form" *ngIf="isSeller && responseDrafts[request.id]">
               <label>
@@ -188,6 +197,31 @@ export class ServiceRequestsComponent implements OnInit {
     });
   }
 
+  updateClientDecision(request: ServiceRequest, status: 'accepted' | 'rejected'): void {
+    if (this.isSeller || this.updatingId) {
+      return;
+    }
+
+    const previousStatus = request.status;
+    request.status = status;
+    this.updatingId = request.id;
+    this.message = '';
+    this.errorMessage = '';
+
+    this.serviceRequestService.updateServiceRequestStatus(request.id, { status }).subscribe({
+      next: (updated) => {
+        request.status = updated.status;
+        this.updatingId = null;
+        this.message = `Solicitud #${request.id.slice(0, 8)} ${updated.status === 'accepted' ? 'aceptada' : 'rechazada'} correctamente.`;
+      },
+      error: (err: { error?: { message?: string } }) => {
+        request.status = previousStatus;
+        this.updatingId = null;
+        this.errorMessage = err.error?.message || 'No se pudo actualizar tu decisión sobre la cotización.';
+      }
+    });
+  }
+
   getStatusLabel(status: ServiceRequestStatus): string {
     switch (status) {
       case 'pending':
@@ -196,6 +230,10 @@ export class ServiceRequestsComponent implements OnInit {
         return 'Contactado';
       case 'quoted':
         return 'Cotizado';
+      case 'accepted':
+        return 'Aceptado';
+      case 'rejected':
+        return 'Rechazado';
       case 'closed':
         return 'Cerrado';
       case 'cancelled':
