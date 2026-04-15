@@ -1,0 +1,1 @@
+node_modules/\ndist/\n.angular/\nbuild/\n.DS_Store\n.env.local\n.env.*.local\n*.log\nnpm-debug.log*\nyarn-debug.log*\nyarn-error.log*\n.vscode/\n.idea/\n*.swp\n*.swo\n*~\n.nyc_output/\ncoverage/\n

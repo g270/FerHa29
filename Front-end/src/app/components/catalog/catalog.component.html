@@ -1,0 +1,42 @@
+<div class="catalog-container">
+  <div class="search-bar">
+    <input
+      type="text"
+      [(ngModel)]="searchTerm"
+      (keyup)="search()"
+      placeholder="Buscar productos..."
+      class="search-input"
+    />
+  </div>
+
+  <div *ngIf="loading" class="loading">Cargando productos...</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <div *ngIf="!loading && filteredProducts.length === 0" class="no-products">
+    No se encontraron productos
+  </div>
+
+  <div class="products-grid">
+    <div *ngFor="let product of filteredProducts" class="product-card">
+      <div class="product-image">
+        <img [src]="product.imageUrl || 'assets/placeholder.png'" [alt]="product.name" />
+      </div>
+      <div class="product-info">
+        <h3>{{ product.name }}</h3>
+        <p class="description">{{ product.description | slice: 0: 100 }}...</p>
+        <div class="price">${{ product.price.toFixed(2) }}</div>
+        <div class="rating">⭐ {{ product.rating }}/5</div>
+        <div class="actions">
+          <button (click)="viewProduct(product.id)" class="btn-detail">Ver Detalles</button>
+          <button
+            (click)="addToCart(product)"
+            [disabled]="product.stock === 0"
+            class="btn-cart"
+          >
+            {{ product.stock > 0 ? 'Añadir al Carrito' : 'Agotado' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

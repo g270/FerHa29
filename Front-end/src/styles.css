@@ -1,0 +1,93 @@
+﻿* {
+  box-sizing: border-box;
+}
+
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', 'Arial', sans-serif;
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+/* Paleta de colores corporativos */
+:root {
+  --color-morado: #5B21B6;
+  --color-verde: #2DD4BF;
+  --color-blanco: #fff;
+  --color-gris-claro: #f3f4f6;
+  --color-gris-oscuro: #374151;
+}
+
+/* Botones base */
+.btn-primary {
+  background: var(--color-morado);
+  color: var(--color-blanco);
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-primary:hover {
+  background: #4c1d95;
+}
+.btn-secondary {
+  background: var(--color-verde);
+  color: var(--color-blanco);
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-secondary:hover {
+  background: #14b8a6;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--color-morado);
+  border: 2px solid var(--color-morado);
+  border-radius: 0.75rem;
+  padding: 0.7rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.btn-ghost:hover {
+  background: var(--color-morado);
+  color: var(--color-blanco);
+}
+
+/* Cards base */
+.card {
+  background: var(--color-blanco);
+  border-radius: 1rem;
+  box-shadow: 0 2px 8px rgba(91,33,182,0.07);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 0.25em 0.8em;
+  border-radius: 999px;
+  font-size: 0.85em;
+  font-weight: 600;
+  background: var(--color-verde);
+  color: var(--color-blanco);
+}
+
+a {
+  color: var(--color-morado);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+a:hover {
+  color: var(--color-verde);
+  text-decoration: underline;
+}

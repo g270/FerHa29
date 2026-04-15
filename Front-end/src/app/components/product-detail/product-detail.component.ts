@@ -1,0 +1,213 @@
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { CartService, ProductService } from '../../services/index';
+import { Product } from '../../models/models';
+
+@Component({
+  selector: 'app-product-detail',
+  styleUrls: ['./product-detail.component.css'],
+  template: `
+    <div class="product-detail-page">
+      <div *ngIf="loading" class="loading">Cargando producto...</div>
+
+      <div *ngIf="!loading && product" class="product-shell">
+        <div class="product-detail card">
+          <div class="gallery-column">
+            <div class="product-image">
+              <img [src]="selectedImage" [alt]="product.name" />
+            </div>
+            <div class="thumbnail-row">
+              <button
+                *ngFor="let image of galleryImages"
+                type="button"
+                class="thumbnail"
+                [class.active]="selectedImage === image"
+                (click)="selectedImage = image"
+              >
+                <img [src]="image" [alt]="product.name" />
+              </button>
+            </div>
+          </div>
+
+          <div class="product-info">
+            <div class="eyebrow">Producto destacado</div>
+            <h1>{{ product.name }}</h1>
+            <p class="description">{{ product.description }}</p>
+
+            <div class="summary-grid">
+              <div>
+                <div class="label">Precio</div>
+                <div class="price">$ {{ (product.offerPrice || product.price) | number:'1.2-2' }}</div>
+                <div class="label" *ngIf="product.offerPrice && product.offerPrice < product.price">Antes: $ {{ product.price | number:'1.2-2' }}</div>
+              </div>
+              <div>
+                <div class="label">Calificación</div>
+                <div class="rating">{{ product.rating }}/5</div>
+              </div>
+            </div>
+
+            <div class="stock" [class.out-of-stock]="product.stock === 0">
+              {{ product.stock === 0 ? 'Sin stock disponible' : 'Stock disponible: ' + product.stock }}
+            </div>
+
+            <div class="purchase-box">
+              <div class="quantity-selector">
+                <span>Cantidad</span>
+                <div class="quantity-controls">
+                  <button type="button" (click)="decreaseQuantity()" [disabled]="quantity <= 1">-</button>
+                  <input type="number" [ngModel]="quantity" (ngModelChange)="onQuantityChange($event)" min="1" [max]="product.stock || 1" />
+                  <button type="button" (click)="increaseQuantity()" [disabled]="quantity >= product.stock">+</button>
+                </div>
+              </div>
+
+              <div class="action-row">
+                <button class="btn-primary" type="button" (click)="addToCart()" [disabled]="product.stock === 0">
+                  Añadir al carrito
+                </button>
+                <button class="btn-ghost" type="button" (click)="contactSeller()">
+                  Contactar al experto
+                </button>
+              </div>
+
+              <p *ngIf="interactionMessage" class="interaction-note" [class.success-note]="interactionType === 'success'" [class.info-note]="interactionType === 'info'">
+                {{ interactionMessage }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-panels card">
+          <button type="button" class="panel-toggle" (click)="showSpecs = !showSpecs">
+            <span>Especificaciones técnicas</span>
+            <span>{{ showSpecs ? '−' : '+' }}</span>
+          </button>
+          <div *ngIf="showSpecs" class="panel-content">
+            <div class="spec-grid">
+              <div><strong>ID:</strong> {{ product.id }}</div>
+              <div><strong>Categoría:</strong> {{ product.category?.name || product.categoryId || 'General' }}</div>
+              <div><strong>Proveedor:</strong> {{ product.seller?.businessName || product.sellerId || 'Mercaclick' }}</div>
+              <div><strong>SKU:</strong> {{ product.sku || 'No especificado' }}</div>
+              <div><strong>Entrega:</strong> {{ getDeliveryLabel(product.deliveryType) }}</div>
+              <div><strong>Punto de entrega:</strong> {{ product.dispatchLocation || 'Coordinado con el proveedor' }}</div>
+              <div><strong>Actualizado:</strong> {{ product.updatedAt ? (product.updatedAt | date:'mediumDate') : 'Reciente' }}</div>
+            </div>
+          </div>
+
+          <button type="button" class="panel-toggle" (click)="showWarranty = !showWarranty">
+            <span>Garantía</span>
+            <span>{{ showWarranty ? '−' : '+' }}</span>
+          </button>
+          <div *ngIf="showWarranty" class="panel-content">
+            <p>
+              Este producto cuenta con respaldo del proveedor dentro de Mercaclick. Antes de finalizar la compra,
+              puedes contactar al vendedor para confirmar condiciones de entrega, soporte y cobertura.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="!loading && !product" class="error">Producto no encontrado.</div>
+    </div>
+  `
+})
+export class ProductDetailComponent implements OnInit {
+  product: Product | null = null;
+  loading = true;
+  quantity = 1;
+  selectedImage = '';
+  galleryImages: string[] = [];
+  showSpecs = true;
+  showWarranty = false;
+  interactionMessage = '';
+  interactionType: 'success' | 'info' | '' = '';
+
+  constructor(
+    private productService: ProductService,
+    private cartService: CartService,
+    private route: ActivatedRoute
+  ) {}
+
+  ngOnInit(): void {
+    const productId = this.route.snapshot.paramMap.get('id');
+    if (!productId) {
+      this.loading = false;
+      return;
+    }
+
+    this.productService.getProductById(productId).subscribe({
+      next: (data) => {
+        this.product = data;
+        this.galleryImages = this.buildGalleryImages(data.imageUrl);
+        this.selectedImage = this.galleryImages[0];
+        this.loading = false;
+      },
+      error: (err: unknown) => {
+        console.error('Error al cargar producto', err);
+        this.loading = false;
+      }
+    });
+  }
+
+  addToCart(): void {
+    if (!this.product) {
+      return;
+    }
+
+    this.cartService.addToCart(this.product.id, this.quantity);
+    this.interactionType = 'success';
+    this.interactionMessage = `${this.product.name} fue añadido al carrito.`;
+  }
+
+  increaseQuantity(): void {
+    if (!this.product) {
+      return;
+    }
+
+    this.quantity = Math.min(this.quantity + 1, Math.max(this.product.stock, 1));
+  }
+
+  decreaseQuantity(): void {
+    this.quantity = Math.max(this.quantity - 1, 1);
+  }
+
+  onQuantityChange(value: string | number): void {
+    if (!this.product) {
+      this.quantity = 1;
+      return;
+    }
+
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) {
+      this.quantity = 1;
+      return;
+    }
+
+    this.quantity = Math.min(Math.max(Math.floor(parsed), 1), Math.max(this.product.stock, 1));
+  }
+
+  contactSeller(): void {
+    if (!this.product) {
+      return;
+    }
+
+    this.interactionType = 'info';
+    this.interactionMessage = `Puedes coordinar la compra de ${this.product.name} desde Mis pedidos o con los datos visibles del proveedor.`;
+  }
+
+  getDeliveryLabel(deliveryType?: string): string {
+    if (deliveryType === 'envio') {
+      return 'Envío';
+    }
+
+    if (deliveryType === 'mixto') {
+      return 'Retiro y envío';
+    }
+
+    return 'Retiro';
+  }
+
+  private buildGalleryImages(imageUrl: string): string[] {
+    const fallback = imageUrl || 'https://placehold.co/800x600?text=Mercaclick';
+    return [fallback, fallback, fallback, fallback];
+  }
+}

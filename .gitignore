@@ -1,0 +1,29 @@
+# Root Git ignore for unified Mercaclick backup
+
+# Backend
+Back-end/node_modules/
+Back-end/coverage/
+Back-end/.env
+Back-end/npm-debug.log*
+
+# Frontend
+Front-end/node_modules/
+Front-end/dist/
+Front-end/.angular/
+Front-end/build/
+Front-end/.env.local
+Front-end/.env.*.local
+Front-end/*.log
+Front-end/npm-debug.log*
+Front-end/yarn-debug.log*
+Front-end/yarn-error.log*
+Front-end/.vscode/
+Front-end/.idea/
+Front-end/.nyc_output/
+Front-end/coverage/
+
+# OS/editor noise
+.DS_Store
+*.swp
+*.swo
+*~

@@ -1,0 +1,26 @@
+﻿<nav class="navbar">
+  <h1>{{ title }}</h1>
+  <ul>
+    <li><a routerLink="/">Catálogo</a></li>
+    <li *ngIf="!isAuthenticated || isClient">
+      <a routerLink="/cart" class="cart-link">
+        Carrito
+        <span class="cart-count" *ngIf="cartCount > 0">{{ cartCount }}</span>
+      </a>
+    </li>
+    <li *ngIf="isAuthenticated"><a routerLink="/orders">{{ isSeller ? 'Ventas' : 'Mis Pedidos' }}</a></li>
+    <li *ngIf="isAuthenticated"><a routerLink="/dashboard">{{ isSeller ? 'Mi Negocio' : 'Perfil' }}</a></li>
+    <li *ngIf="isAuthenticated && isSeller"><a routerLink="/seller/products/new">Publicar</a></li>
+    <li *ngIf="!isAuthenticated"><a routerLink="/login">Login</a></li>
+    <li *ngIf="!isAuthenticated"><a routerLink="/register">Registro</a></li>
+    <li *ngIf="isAuthenticated"><a href="#" (click)="logout(); $event.preventDefault()">Salir</a></li>
+  </ul>
+</nav>
+
+<main class="container">
+  <router-outlet></router-outlet>
+</main>
+
+<footer class="footer">
+  <p>&copy; 2026 Mercaclick - Catálogo de Emprendedores</p>
+</footer>
