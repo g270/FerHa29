@@ -1,4 +1,87 @@
-const { Order, OrderItem, Product, Seller, sequelize } = require('../models');
+const { Notification, Order, OrderItem, Product, Seller, User, sequelize } = require('../models');
+
+const orderLink = '/orders';
+
+const getUserLabel = (user) => {
+  if (!user) {
+    return 'Un cliente';
+  }
+
+  const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+  return fullName || user.email || 'Un cliente';
+};
+
+const getOrderStatusLabel = (status) => {
+  switch (status) {
+    case 'pending':
+      return 'Pendiente';
+    case 'confirmed':
+      return 'Confirmado';
+    case 'shipped':
+      return 'Enviado';
+    case 'delivered':
+      return 'Completado';
+    case 'cancelled':
+      return 'Cancelado';
+    default:
+      return status;
+  }
+};
+
+const createNotification = async ({ userId, title, message }) => {
+  if (!userId) {
+    return;
+  }
+
+  await Notification.create({
+    userId,
+    title,
+    message,
+    link: orderLink
+  });
+};
+
+const notifySellersAboutNewOrder = async (order, client) => {
+  const items = Array.isArray(order.items) ? order.items : [];
+  const sellerIds = [...new Set(items.map((item) => item.product?.sellerId).filter(Boolean))];
+
+  if (sellerIds.length === 0) {
+    return;
+  }
+
+  const sellers = await Seller.findAll({ where: { id: sellerIds } });
+  const sellersById = new Map(sellers.map((seller) => [seller.id, seller]));
+  const clientLabel = getUserLabel(client);
+
+  await Promise.all(sellerIds.map(async (sellerId) => {
+    const seller = sellersById.get(sellerId);
+    const sellerItems = items.filter((item) => item.product?.sellerId === sellerId);
+    const itemCount = sellerItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    const itemLabel = itemCount === 1 ? 'producto' : 'productos';
+
+    await createNotification({
+      userId: seller?.userId,
+      title: 'Nueva venta registrada',
+      message: `${clientLabel} realizó un pedido con ${itemCount} ${itemLabel} de tu catálogo. Folio #${order.id.slice(0, 8)}.`
+    });
+  }));
+};
+
+const notifyClientAboutNewOrder = async (order) => {
+  await createNotification({
+    userId: order.userId,
+    title: 'Pedido recibido',
+    message: `Tu pedido #${order.id.slice(0, 8)} fue registrado correctamente por un total de $ ${Number(order.totalAmount || 0).toFixed(2)}.`
+  });
+};
+
+const notifyClientAboutOrderStatusChange = async (order, actorLabel) => {
+  await createNotification({
+    userId: order.userId,
+    title: 'Actualización de pedido',
+    message: `${actorLabel} actualizó tu pedido #${order.id.slice(0, 8)} a ${getOrderStatusLabel(order.status)}.`
+  });
+};
 
 const getEffectiveProductPrice = (product) => {
   const regularPrice = Number(product.price || 0);
@@ -137,6 +220,7 @@ exports.createOrder = async (req, res, next) => {
       }
     }
 
+    const client = await User.findByPk(req.userId);
     const transaction = await sequelize.transaction();
 
     try {
@@ -189,6 +273,9 @@ exports.createOrder = async (req, res, next) => {
         include: [{ model: OrderItem, as: 'items', include: [{ model: Product, as: 'product' }] }]
       });
 
+      await notifyClientAboutNewOrder(orderWithItems);
+      await notifySellersAboutNewOrder(orderWithItems, client);
+
       res.status(201).json(orderWithItems);
     } catch (transactionError) {
       await transaction.rollback();
@@ -203,6 +290,7 @@ exports.updateOrderStatus = async (req, res, next) => {
   try {
     let where = { id: req.params.id };
     let include = [];
+    let actorLabel = 'El equipo de Mercaclick';
 
     if (req.userType === 'seller') {
       const sellerProfile = await getSellerProfile(req.userId);
@@ -210,6 +298,7 @@ exports.updateOrderStatus = async (req, res, next) => {
         return res.status(404).json({ message: 'Orden no encontrada' });
       }
       include = buildOrderInclude(sellerProfile.id);
+      actorLabel = sellerProfile.businessName || 'El proveedor';
     }
 
     if (req.userType === 'client') {
@@ -223,7 +312,14 @@ exports.updateOrderStatus = async (req, res, next) => {
     if (!order) {
       return res.status(404).json({ message: 'Orden no encontrada' });
     }
+
+    const previousStatus = order.status;
     await order.update({ status: req.body.status });
+
+    if (previousStatus !== order.status) {
+      await notifyClientAboutOrderStatusChange(order, actorLabel);
+    }
+
     res.json(order);
   } catch (error) {
     next(error);
