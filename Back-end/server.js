@@ -122,6 +122,18 @@ async function ensureDatabaseExists() {
   }
 }
 
+function listenAsync() {
+  return new Promise((resolve, reject) => {
+    const server = app.listen(PORT, () => {
+      console.log(`✅ Servidor backend ejecutándose en http://localhost:${PORT}`);
+      console.log(`📡 APIs disponibles en http://localhost:${PORT}/api/`);
+      resolve(server);
+    });
+
+    server.once('error', reject);
+  });
+}
+
 async function startServer() {
   try {
     await sequelize.authenticate();
@@ -136,12 +148,13 @@ async function startServer() {
     await ensureDefaultCategories();
     console.log('Categorias base verificadas correctamente');
 
-    app.listen(PORT, () => {
-      console.log(`✅ Servidor backend ejecutándose en http://localhost:${PORT}`);
-      console.log(`📡 APIs disponibles en http://localhost:${PORT}/api/`);
-    });
+    await listenAsync();
   } catch (error) {
-    console.error('❌ No se pudo iniciar el servidor:', error.message);
+    if (error.code === 'EADDRINUSE') {
+      console.error(`❌ No se pudo iniciar el servidor: el puerto ${PORT} ya está en uso`);
+    } else {
+      console.error('❌ No se pudo iniciar el servidor:', error.message);
+    }
     process.exit(1);
   }
 }
