@@ -172,8 +172,8 @@ export class ProductDetailComponent implements OnInit {
 
     if (this.isService(this.product)) {
       this.interactionType = 'info';
-      this.interactionMessage = `Coordina ${this.product.name} directamente con el proveedor desde su perfil comercial.`;
-      this.viewSellerProfile();
+      this.interactionMessage = `Abre una solicitud para coordinar ${this.product.name} con el proveedor.`;
+      this.router.navigate(['/services/request', this.product.id]);
       return;
     }
 
@@ -188,7 +188,7 @@ export class ProductDetailComponent implements OnInit {
     }
 
     if (this.isService(this.product)) {
-      this.contactSeller();
+      this.addToCart();
       return;
     }
 

@@ -7,6 +7,7 @@ const Category = require('./Category')(sequelize, Sequelize.DataTypes);
 const Product = require('./Product')(sequelize, Sequelize.DataTypes);
 const Order = require('./Order')(sequelize, Sequelize.DataTypes);
 const OrderItem = require('./OrderItem')(sequelize, Sequelize.DataTypes);
+const ServiceRequest = require('./ServiceRequest')(sequelize, Sequelize.DataTypes);
 
 User.hasOne(Seller, { foreignKey: 'userId', as: 'sellerProfile' });
 Seller.belongsTo(User, { foreignKey: 'userId', as: 'user' });
@@ -20,6 +21,12 @@ Order.hasMany(OrderItem, { foreignKey: 'orderId', as: 'items' });
 OrderItem.belongsTo(Order, { foreignKey: 'orderId', as: 'order' });
 Product.hasMany(OrderItem, { foreignKey: 'productId', as: 'orderItems' });
 OrderItem.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
+User.hasMany(ServiceRequest, { foreignKey: 'clientUserId', as: 'serviceRequests', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
+ServiceRequest.belongsTo(User, { foreignKey: 'clientUserId', as: 'client', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
+Seller.hasMany(ServiceRequest, { foreignKey: 'sellerId', as: 'serviceRequests', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
+ServiceRequest.belongsTo(Seller, { foreignKey: 'sellerId', as: 'seller', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
+Product.hasMany(ServiceRequest, { foreignKey: 'productId', as: 'serviceRequests', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
+ServiceRequest.belongsTo(Product, { foreignKey: 'productId', as: 'product', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
 
 module.exports = {
   sequelize,
@@ -29,5 +36,6 @@ module.exports = {
   Category,
   Product,
   Order,
-  OrderItem
+  OrderItem,
+  ServiceRequest
 };

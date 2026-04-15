@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, map, tap } from 'rxjs';
-import { AuthResponse, CartItem, Category, CreateOrderPayload, Order, Product, Seller, User } from '../models/models';
+import { AuthResponse, CartItem, Category, CreateOrderPayload, CreateServiceRequestPayload, Order, Product, Seller, ServiceRequest, ServiceRequestStatus, User } from '../models/models';
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -153,6 +153,23 @@ export class OrderService {
 
   updateOrderStatus(id: string, status: Order['status']): Observable<Order> {
     return this.http.put<Order>(`${API_URL}/orders/${id}/status`, { status });
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class ServiceRequestService {
+  constructor(private http: HttpClient) {}
+
+  getServiceRequests(): Observable<ServiceRequest[]> {
+    return this.http.get<ServiceRequest[]>(`${API_URL}/service-requests`);
+  }
+
+  createServiceRequest(payload: CreateServiceRequestPayload): Observable<ServiceRequest> {
+    return this.http.post<ServiceRequest>(`${API_URL}/service-requests`, payload);
+  }
+
+  updateServiceRequestStatus(id: string, status: ServiceRequestStatus): Observable<ServiceRequest> {
+    return this.http.put<ServiceRequest>(`${API_URL}/service-requests/${id}/status`, { status });
   }
 }
 

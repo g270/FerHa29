@@ -36,6 +36,8 @@ export interface Seller {
   products?: Product[];
 }
 
+export type ServiceRequestStatus = 'pending' | 'contacted' | 'quoted' | 'closed' | 'cancelled';
+
 export interface Category {
   id: string;
   name: string;
@@ -79,6 +81,27 @@ export interface CartItem {
   quantity: number;
   product?: Product;
   availabilityIssue?: string;
+}
+
+export interface ServiceRequest {
+  id: string;
+  clientUserId: string;
+  sellerId: string;
+  productId: string;
+  message: string;
+  preferredSchedule?: string;
+  status: ServiceRequestStatus;
+  createdAt?: string;
+  updatedAt?: string;
+  product?: Product;
+  seller?: Seller;
+  client?: User;
+}
+
+export interface CreateServiceRequestPayload {
+  productId: string;
+  message: string;
+  preferredSchedule?: string;
 }
 
 export interface User {

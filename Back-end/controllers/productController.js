@@ -99,6 +99,12 @@ exports.deleteProduct = async (req, res, next) => {
     await product.destroy();
     res.status(204).send();
   } catch (error) {
+    if (error.name === 'SequelizeForeignKeyConstraintError') {
+      return res.status(409).json({
+        message: 'No se puede eliminar esta publicación porque ya tiene solicitudes asociadas. Desactívala o cierra primero las solicitudes pendientes.'
+      });
+    }
+
     next(error);
   }
 };

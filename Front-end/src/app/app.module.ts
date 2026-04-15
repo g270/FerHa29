@@ -15,6 +15,8 @@ import { RegisterComponent } from './components/register/register.component';
 import { SellerProductFormComponent } from './components/seller-product-form/seller-product-form.component';
 import { OrderConfirmationComponent } from './components/order-confirmation/order-confirmation.component';
 import { SellerProfileComponent } from './components/seller-profile/seller-profile.component';
+import { ServiceRequestFormComponent } from './components/service-request-form/service-request-form.component';
+import { ServiceRequestsComponent } from './components/service-requests/service-requests.component';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
 
 @NgModule({
@@ -29,7 +31,9 @@ import { AuthInterceptor } from './interceptors/auth.interceptor';
     RegisterComponent,
     SellerProductFormComponent,
     OrderConfirmationComponent,
-    SellerProfileComponent
+    SellerProfileComponent,
+    ServiceRequestFormComponent,
+    ServiceRequestsComponent
   ],
   imports: [
     BrowserModule,

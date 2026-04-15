@@ -305,8 +305,8 @@ export class CatalogComponent implements OnInit {
   handlePrimaryAction(product: Product): void {
     if ((product.itemType || 'producto') === 'servicio') {
       this.feedbackProductId = product.id;
-      this.feedbackMessage = `Para coordinar ${product.name}, revisa el negocio del proveedor.`;
-      this.viewSeller(product.seller?.id);
+      this.feedbackMessage = `Completa una solicitud para coordinar ${product.name} con el proveedor.`;
+      this.router.navigate(['/services/request', product.id]);
       return;
     }
 

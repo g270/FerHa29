@@ -268,9 +268,9 @@ export class DashboardComponent implements OnInit {
         this.productMessage = 'La publicación fue eliminada correctamente.';
         this.removingProductId = null;
       },
-      error: (err: unknown) => {
+      error: (err: { error?: { message?: string } }) => {
         console.error('Error eliminando producto', err);
-        this.productError = 'No se pudo eliminar la publicación. Intenta nuevamente.';
+        this.productError = err.error?.message || 'No se pudo eliminar la publicación. Intenta nuevamente.';
         this.removingProductId = null;
       }
     });
