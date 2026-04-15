@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CartService, ProductService } from '../../services/index';
 import { Product } from '../../models/models';
 
@@ -44,6 +44,22 @@ import { Product } from '../../models/models';
                 <div class="label">Calificación</div>
                 <div class="rating">{{ product.rating }}/5</div>
               </div>
+            </div>
+
+            <div class="provider-card" *ngIf="product.seller">
+              <div>
+                <div class="label">Negocio proveedor</div>
+                <strong>{{ product.seller.businessName }}</strong>
+                <p>{{ product.seller.description || 'Proveedor registrado en Mercaclick.' }}</p>
+              </div>
+              <button class="btn-ghost" type="button" (click)="viewSellerProfile()">Ver negocio</button>
+            </div>
+
+            <div class="provider-meta" *ngIf="product.seller">
+              <span class="meta-chip" [class.good-chip]="product.seller.hasHomeDelivery">{{ product.seller.hasHomeDelivery ? 'Entrega a domicilio disponible' : 'Sin entrega a domicilio' }}</span>
+              <span class="meta-chip" [class.good-chip]="product.seller.hasPhysicalStore">{{ product.seller.hasPhysicalStore ? 'Cuenta con local físico' : 'Sin local físico declarado' }}</span>
+              <span class="meta-chip" *ngIf="product.seller.businessHours">Horario: {{ product.seller.businessHours }}</span>
+              <span class="meta-chip" *ngIf="product.seller.businessAddress">{{ product.seller.businessAddress }}</span>
             </div>
 
             <div class="stock" [class.out-of-stock]="product.stock === 0">
@@ -124,7 +140,8 @@ export class ProductDetailComponent implements OnInit {
   constructor(
     private productService: ProductService,
     private cartService: CartService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -192,6 +209,14 @@ export class ProductDetailComponent implements OnInit {
 
     this.interactionType = 'info';
     this.interactionMessage = `Puedes coordinar la compra de ${this.product.name} desde Mis pedidos o con los datos visibles del proveedor.`;
+  }
+
+  viewSellerProfile(): void {
+    if (!this.product?.seller?.id) {
+      return;
+    }
+
+    this.router.navigate(['/seller', this.product.seller.id]);
   }
 
   getDeliveryLabel(deliveryType?: string): string {

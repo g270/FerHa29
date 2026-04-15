@@ -35,6 +35,13 @@ type ProductFormStep = 1 | 2 | 3 | 4;
           <h2>Informacion basica</h2>
           <div class="form-grid">
             <label>
+              <span>Tipo de publicación</span>
+              <select [(ngModel)]="form.itemType" name="itemType">
+                <option value="producto">Producto</option>
+                <option value="servicio">Servicio</option>
+              </select>
+            </label>
+            <label>
               <span>Titulo</span>
               <input type="text" [(ngModel)]="form.title" name="title" required />
             </label>
@@ -114,6 +121,7 @@ type ProductFormStep = 1 | 2 | 3 | 4;
 
           <div class="summary-box">
             <h3>Resumen de publicacion</h3>
+            <p><strong>Tipo:</strong> {{ form.itemType === 'servicio' ? 'Servicio' : 'Producto' }}</p>
             <p><strong>Titulo:</strong> {{ form.title || 'Sin titulo' }}</p>
             <p><strong>Categoria:</strong> {{ getSelectedCategoryName() }}</p>
             <p><strong>Precio:</strong> $ {{ form.offerPrice || form.price || 0 }}</p>
@@ -157,6 +165,7 @@ export class SellerProductFormComponent implements OnInit {
   ];
 
   form = {
+    itemType: 'producto',
     title: '',
     categoryId: '',
     description: '',
@@ -249,6 +258,7 @@ export class SellerProductFormComponent implements OnInit {
     this.errorMessage = '';
 
     const payload: Partial<Product> = {
+      itemType: this.form.itemType,
       name: this.form.title,
       description: this.form.description,
       categoryId: this.form.categoryId,
@@ -285,6 +295,7 @@ export class SellerProductFormComponent implements OnInit {
     this.productService.getProductById(productId).subscribe({
       next: (product) => {
         this.form = {
+          itemType: product.itemType || 'producto',
           title: product.name || '',
           categoryId: product.categoryId || '',
           description: product.description || '',

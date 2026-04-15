@@ -11,6 +11,7 @@ import { LoginComponent } from './components/login/login.component';
 import { RegisterComponent } from './components/register/register.component';
 import { SellerProductFormComponent } from './components/seller-product-form/seller-product-form.component';
 import { OrderConfirmationComponent } from './components/order-confirmation/order-confirmation.component';
+import { SellerProfileComponent } from './components/seller-profile/seller-profile.component';
 import { AuthGuard } from './guards/auth.guard';
 
 const routes: Routes = [
@@ -18,6 +19,7 @@ const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'product/:id', component: ProductDetailComponent },
+  { path: 'seller/:id', component: SellerProfileComponent },
   { path: 'cart', component: CartComponent },
   { path: 'orders', component: OrdersComponent, canActivate: [AuthGuard] },
   { path: 'orders/:id/confirmation', component: OrderConfirmationComponent, canActivate: [AuthGuard] },

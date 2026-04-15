@@ -4,6 +4,7 @@ export interface Product {
   description: string;
   price: number;
   stock: number;
+  itemType?: 'producto' | 'servicio' | string;
   sku?: string;
   offerPrice?: number;
   categoryId: string;
@@ -32,6 +33,7 @@ export interface Seller {
   businessNotes?: string;
   rating: number;
   isVerified: boolean;
+  products?: Product[];
 }
 
 export interface Category {

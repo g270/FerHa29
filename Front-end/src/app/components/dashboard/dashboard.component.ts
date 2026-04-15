@@ -24,57 +24,60 @@ import { AuthService, ProductService, SellerService } from '../../services/index
       </div>
       <div class="tabs">
         <button [class.active]="activeTab === 'productos'" (click)="activeTab = 'productos'">Productos</button>
+        <button [class.active]="activeTab === 'servicios'" (click)="activeTab = 'servicios'">Servicios</button>
         <button [class.active]="activeTab === 'negocio'" (click)="activeTab = 'negocio'">Negocio</button>
         <button [class.active]="activeTab === 'resenas'" (click)="activeTab = 'resenas'">Reseñas</button>
       </div>
       <div class="tab-content">
-        <div *ngIf="activeTab === 'productos'">
+        <div *ngIf="activeTab === 'productos' || activeTab === 'servicios'">
           <div class="tab-toolbar" *ngIf="isSeller">
             <div>
-              <h2>Panel de publicaciones</h2>
-              <p>Gestiona el estado, las ofertas y el inventario visible de tu tienda dentro de Mercaclick.</p>
+              <h2>Panel de {{ activeTab === 'servicios' ? 'servicios' : 'publicaciones' }}</h2>
+              <p>{{ activeTab === 'servicios' ? 'Gestiona las fichas de servicio y la información operativa visible de tu negocio.' : 'Gestiona el estado, las ofertas y el inventario visible de tu tienda dentro de Mercaclick.' }}</p>
             </div>
-            <button type="button" class="btn-primary" (click)="goToCreateProduct()">Nueva publicación</button>
+            <button type="button" class="btn-primary" (click)="goToCreateProduct()">{{ activeTab === 'servicios' ? 'Nuevo servicio' : 'Nueva publicación' }}</button>
           </div>
 
-          <div *ngIf="productsLoading" class="state">Cargando publicaciones...</div>
+          <div *ngIf="productsLoading" class="state">Cargando {{ activeTab === 'servicios' ? 'servicios' : 'publicaciones' }}...</div>
 
-          <div class="product-summary" *ngIf="!productsLoading && sellerProducts.length > 0">
+          <div class="product-summary" *ngIf="!productsLoading && getActiveCollection().length > 0">
             <article class="summary-tile card">
-              <span>Total publicadas</span>
-              <strong>{{ sellerProducts.length }}</strong>
+              <span>Total {{ activeTab === 'servicios' ? 'servicios' : 'publicaciones' }}</span>
+              <strong>{{ getActiveCollection().length }}</strong>
             </article>
             <article class="summary-tile card">
               <span>Activas</span>
-              <strong>{{ getActiveCount() }}</strong>
+              <strong>{{ getActiveCount(activeTab) }}</strong>
             </article>
             <article class="summary-tile card warning-tile">
               <span>Borradores</span>
-              <strong>{{ getDraftCount() }}</strong>
+              <strong>{{ getDraftCount(activeTab) }}</strong>
             </article>
             <article class="summary-tile card accent-tile">
               <span>Con oferta</span>
-              <strong>{{ getOfferCount() }}</strong>
+              <strong>{{ getOfferCount(activeTab) }}</strong>
             </article>
           </div>
 
-          <div class="product-list" *ngIf="!productsLoading && sellerProducts.length > 0">
-            <article class="product-item card" *ngFor="let product of sellerProducts" [class.inactive-product]="product.isActive === false" [class.low-stock-product]="product.stock === 0">
+          <div class="product-list" *ngIf="!productsLoading && getActiveCollection().length > 0">
+            <article class="product-item card" *ngFor="let product of getActiveCollection()" [class.inactive-product]="product.isActive === false" [class.low-stock-product]="product.stock === 0 && product.itemType !== 'servicio'">
               <img [src]="product.imageUrl || 'https://placehold.co/600x400?text=Mercaclick'" [alt]="product.name" />
               <div class="product-copy">
                 <div class="product-heading">
                   <h3>{{ product.name }}</h3>
                   <span class="status-pill" [class.draft]="product.isActive === false" [class.live]="product.isActive !== false">
-                    {{ product.isActive === false ? 'Borrador' : 'Activa' }}
+                    {{ product.isActive === false ? 'Borrador' : (product.itemType === 'servicio' ? 'Servicio activo' : 'Activa') }}
                   </span>
                 </div>
                 <p>{{ product.description }}</p>
                 <div class="product-meta">
                   <span class="badge">$ {{ getDisplayPrice(product) | number:'1.2-2' }}</span>
+                  <span class="meta-chip type-chip">{{ product.itemType === 'servicio' ? 'Servicio' : 'Producto' }}</span>
                   <span class="meta-chip offer-chip" *ngIf="product.offerPrice && product.offerPrice < product.price">Oferta desde $ {{ product.offerPrice | number:'1.2-2' }}</span>
                   <span class="meta-chip" *ngIf="product.offerPrice && product.offerPrice < product.price">Antes: $ {{ product.price | number:'1.2-2' }}</span>
                   <span class="meta-chip">{{ getCategoryName(product) }}</span>
-                  <span class="meta-chip" [class.alert-chip]="product.stock === 0">{{ product.stock === 0 ? 'Sin stock' : 'Stock: ' + product.stock }}</span>
+                  <span class="meta-chip" *ngIf="product.itemType === 'servicio'">Disponibilidad coordinada</span>
+                  <span class="meta-chip" *ngIf="product.itemType !== 'servicio'" [class.alert-chip]="product.stock === 0">{{ product.stock === 0 ? 'Sin stock' : 'Stock: ' + product.stock }}</span>
                   <span class="meta-chip">⭐ {{ product.rating }}</span>
                 </div>
                 <div class="product-actions">
@@ -90,9 +93,9 @@ import { AuthService, ProductService, SellerService } from '../../services/index
           <p class="state success" *ngIf="productMessage">{{ productMessage }}</p>
           <p class="state error" *ngIf="productError">{{ productError }}</p>
 
-          <div class="empty-panel card" *ngIf="!productsLoading && sellerProducts.length === 0">
-            <p>Aún no tienes publicaciones asociadas a esta cuenta.</p>
-            <button type="button" class="btn-secondary" (click)="goToCreateProduct()">Crear primera publicación</button>
+          <div class="empty-panel card" *ngIf="!productsLoading && getActiveCollection().length === 0">
+            <p>{{ activeTab === 'servicios' ? 'Aún no tienes servicios asociados a esta cuenta.' : 'Aún no tienes publicaciones asociadas a esta cuenta.' }}</p>
+            <button type="button" class="btn-secondary" (click)="goToCreateProduct()">{{ activeTab === 'servicios' ? 'Crear primer servicio' : 'Crear primera publicación' }}</button>
           </div>
         </div>
         <div *ngIf="activeTab === 'negocio'">
@@ -200,7 +203,7 @@ export class DashboardComponent implements OnInit {
   businessError = '';
 
   // Tabs para la vista de negocio
-  activeTab: 'productos' | 'negocio' | 'resenas' = 'productos';
+  activeTab: 'productos' | 'servicios' | 'negocio' | 'resenas' = 'productos';
 
   // Calcular años en Mercaclick
   getYearsInMercaclick(dateStr?: string): number {
@@ -281,16 +284,25 @@ export class DashboardComponent implements OnInit {
     return product.offerPrice && product.offerPrice < product.price ? product.offerPrice : product.price;
   }
 
-  getActiveCount(): number {
-    return this.sellerProducts.filter((product) => product.isActive !== false).length;
+  getActiveCount(tab: 'productos' | 'servicios'): number {
+    return this.getCollectionByType(tab).filter((product) => product.isActive !== false).length;
   }
 
-  getDraftCount(): number {
-    return this.sellerProducts.filter((product) => product.isActive === false).length;
+  getDraftCount(tab: 'productos' | 'servicios'): number {
+    return this.getCollectionByType(tab).filter((product) => product.isActive === false).length;
   }
 
-  getOfferCount(): number {
-    return this.sellerProducts.filter((product) => Boolean(product.offerPrice && product.offerPrice < product.price)).length;
+  getOfferCount(tab: 'productos' | 'servicios'): number {
+    return this.getCollectionByType(tab).filter((product) => Boolean(product.offerPrice && product.offerPrice < product.price)).length;
+  }
+
+  getActiveCollection(): Product[] {
+    return this.getCollectionByType(this.activeTab === 'servicios' ? 'servicios' : 'productos');
+  }
+
+  private getCollectionByType(tab: 'productos' | 'servicios'): Product[] {
+    const targetType = tab === 'servicios' ? 'servicio' : 'producto';
+    return this.sellerProducts.filter((product) => (product.itemType || 'producto') === targetType);
   }
 
   saveBusinessProfile(): void {

@@ -118,12 +118,15 @@ import { Product } from '../../models/models';
               <span class="rating-badge">⭐ {{ product.rating }}</span>
             </div>
             <div class="card-flags">
+              <span class="meta-chip type-chip">{{ product.itemType === 'servicio' ? 'Servicio' : 'Producto' }}</span>
               <span class="meta-chip offer-chip" *ngIf="product.offerPrice && product.offerPrice < product.price">Oferta</span>
               <span class="meta-chip">{{ getCategoryLabel(product) }}</span>
               <span class="meta-chip alert-chip" *ngIf="product.stock === 0">Sin stock</span>
             </div>
+            <p class="seller-inline" *ngIf="product.seller?.businessName">Por {{ product.seller?.businessName }}</p>
             <div class="actions">
               <button class="btn-primary" type="button" (click)="viewProduct(product.id)">Ver detalle</button>
+              <button class="btn-ghost" type="button" *ngIf="product.seller?.id" (click)="viewSeller(product.seller?.id)">Ver negocio</button>
               <button class="btn-secondary" type="button" (click)="addToCart(product)" [disabled]="product.stock === 0 || product.isActive === false">Agregar al carrito</button>
             </div>
             <p class="catalog-feedback success" *ngIf="feedbackProductId === product.id">{{ feedbackMessage }}</p>
@@ -271,6 +274,14 @@ export class CatalogComponent implements OnInit {
 
   viewProduct(productId: string): void {
     this.router.navigate(['/product', productId]);
+  }
+
+  viewSeller(sellerId?: string): void {
+    if (!sellerId) {
+      return;
+    }
+
+    this.router.navigate(['/seller', sellerId]);
   }
 
   addToCart(product: Product): void {

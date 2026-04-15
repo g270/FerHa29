@@ -14,6 +14,7 @@ import { LoginComponent } from './components/login/login.component';
 import { RegisterComponent } from './components/register/register.component';
 import { SellerProductFormComponent } from './components/seller-product-form/seller-product-form.component';
 import { OrderConfirmationComponent } from './components/order-confirmation/order-confirmation.component';
+import { SellerProfileComponent } from './components/seller-profile/seller-profile.component';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
 
 @NgModule({
@@ -27,7 +28,8 @@ import { AuthInterceptor } from './interceptors/auth.interceptor';
     LoginComponent,
     RegisterComponent,
     SellerProductFormComponent,
-    OrderConfirmationComponent
+    OrderConfirmationComponent,
+    SellerProfileComponent
   ],
   imports: [
     BrowserModule,

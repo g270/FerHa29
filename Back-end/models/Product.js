@@ -53,6 +53,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       defaultValue: 'retiro'
     },
+    itemType: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'producto'
+    },
     isActive: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

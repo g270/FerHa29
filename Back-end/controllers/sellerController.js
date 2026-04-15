@@ -1,8 +1,12 @@
 const { Seller, Product, User } = require('../models');
 
+const publicUserAttributes = ['id', 'email', 'firstName', 'lastName', 'phone', 'address', 'userType', 'createdAt', 'updatedAt'];
+
 exports.listSellers = async (req, res, next) => {
   try {
-    const sellers = await Seller.findAll({ include: [{ model: User, as: 'user' }] });
+    const sellers = await Seller.findAll({
+      include: [{ model: User, as: 'user', attributes: publicUserAttributes }]
+    });
     res.json(sellers);
   } catch (error) {
     next(error);
@@ -12,7 +16,10 @@ exports.listSellers = async (req, res, next) => {
 exports.getSellerById = async (req, res, next) => {
   try {
     const seller = await Seller.findByPk(req.params.id, {
-      include: [{ model: User, as: 'user' }, { model: Product, as: 'products' }]
+      include: [
+        { model: User, as: 'user', attributes: publicUserAttributes },
+        { model: Product, as: 'products' }
+      ]
     });
     if (!seller) {
       return res.status(404).json({ message: 'Vendedor no encontrado' });

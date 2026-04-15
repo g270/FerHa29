@@ -77,6 +77,14 @@ async function ensureProductColumns() {
         allowNull: false,
         defaultValue: true
       }
+    },
+    {
+      name: 'itemType',
+      definition: {
+        type: Sequelize.DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'producto'
+      }
     }
   ];
 

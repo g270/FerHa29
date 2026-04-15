@@ -1,0 +1,149 @@
+.seller-public-page {
+  max-width: 1120px;
+  margin: 2rem auto;
+  display: grid;
+  gap: 1rem;
+}
+
+.seller-hero {
+  background: linear-gradient(135deg, #f8fafc 0%, #ede9fe 100%);
+}
+
+.seller-brand {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 1.25rem;
+  align-items: center;
+}
+
+.seller-brand img {
+  width: 180px;
+  height: 180px;
+  border-radius: 1.25rem;
+  object-fit: cover;
+}
+
+.seller-brand h1 {
+  margin: 0 0 0.5rem;
+  color: #1f2937;
+}
+
+.seller-description {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.7;
+}
+
+.seller-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.seller-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1rem;
+}
+
+.business-panel,
+.publications-panel {
+  align-content: start;
+}
+
+.business-panel h2,
+.publications-panel h2,
+.publication-group h3 {
+  margin-top: 0;
+  color: #1f2937;
+}
+
+.business-item {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.business-item:last-child {
+  border-bottom: 0;
+}
+
+.business-item span {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.business-item strong {
+  color: #111827;
+  line-height: 1.5;
+}
+
+.panel-header {
+  margin-bottom: 1rem;
+}
+
+.publication-group + .publication-group {
+  margin-top: 1.5rem;
+}
+
+.publication-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.publication-card {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: #f8fafc;
+}
+
+.publication-card img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 0.9rem;
+}
+
+.publication-card h4 {
+  margin: 0 0 0.5rem;
+  color: var(--color-morado);
+}
+
+.publication-card p {
+  margin: 0 0 0.85rem;
+  color: #4b5563;
+}
+
+.publication-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.inline-link {
+  font-weight: 700;
+}
+
+.success-chip {
+  background: #dcfce7;
+  color: #166534;
+}
+
+@media (max-width: 860px) {
+  .seller-layout,
+  .seller-brand,
+  .publication-card {
+    grid-template-columns: 1fr;
+  }
+
+  .seller-brand img {
+    width: 140px;
+    height: 140px;
+  }
+}
