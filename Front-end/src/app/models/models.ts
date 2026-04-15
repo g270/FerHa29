@@ -25,6 +25,11 @@ export interface Seller {
   businessName: string;
   description: string;
   logoUrl: string;
+  hasHomeDelivery?: boolean;
+  hasPhysicalStore?: boolean;
+  businessAddress?: string;
+  businessHours?: string;
+  businessNotes?: string;
   rating: number;
   isVerified: boolean;
 }

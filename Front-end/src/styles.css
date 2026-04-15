@@ -91,3 +91,140 @@ a:hover {
   color: var(--color-verde);
   text-decoration: underline;
 }
+
+.business-profile .business-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.1fr);
+  gap: 1rem;
+}
+
+.business-profile .business-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.business-profile .business-overview {
+  align-content: start;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+}
+
+.business-profile .business-overview h2,
+.business-profile .business-form h2 {
+  margin: 0;
+  color: #1f2937;
+}
+
+.business-profile .business-copy,
+.business-profile .business-form-header p {
+  margin: 0;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.business-profile .business-badges,
+.business-profile .business-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.business-profile .highlight-chip {
+  background: #e5e7eb;
+}
+
+.business-profile .active-chip,
+.business-profile .toggle-pill.enabled {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.business-profile .business-facts {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.business-profile .business-facts article {
+  background: #ffffff;
+  border-radius: 1rem;
+  padding: 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.business-profile .business-facts span {
+  color: #64748b;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.business-profile .business-facts strong {
+  color: #0f172a;
+  line-height: 1.5;
+}
+
+.business-profile .business-form {
+  align-content: start;
+}
+
+.business-profile .business-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.business-profile .business-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.business-profile .business-form-grid label {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.business-profile .business-form-grid span {
+  font-weight: 700;
+  color: #374151;
+}
+
+.business-profile .business-form-grid input,
+.business-profile .business-form-grid textarea {
+  width: 100%;
+  padding: 0.85rem 0.95rem;
+  border-radius: 0.9rem;
+  border: 1px solid #d1d5db;
+  font-size: 0.95rem;
+  background: #fff;
+}
+
+.business-profile .business-form-grid textarea {
+  resize: vertical;
+}
+
+.business-profile .full-width {
+  grid-column: 1 / -1;
+}
+
+.business-profile .toggle-pill {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  border-radius: 999px;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.business-profile .toggle-pill.enabled {
+  border-color: #86efac;
+}
+
+@media (max-width: 760px) {
+  .business-profile .business-grid,
+  .business-profile .business-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

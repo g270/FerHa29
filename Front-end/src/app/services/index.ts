@@ -120,6 +120,10 @@ export class SellerService {
   getSellerProducts(id: string): Observable<Product[]> {
     return this.http.get<Product[]>(`${API_URL}/sellers/${id}/products`);
   }
+
+  updateSeller(id: string, seller: Partial<Seller>): Observable<Seller> {
+    return this.http.put<Seller>(`${API_URL}/sellers/${id}`, seller);
+  }
 }
 
 @Injectable({ providedIn: 'root' })

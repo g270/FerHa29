@@ -38,6 +38,11 @@ exports.updateSeller = async (req, res, next) => {
     if (!seller) {
       return res.status(404).json({ message: 'Vendedor no encontrado' });
     }
+
+    if (req.userType !== 'admin' && seller.userId !== req.userId) {
+      return res.status(403).json({ message: 'No tienes permisos para actualizar este perfil de negocio' });
+    }
+
     await seller.update(req.body);
     res.json(seller);
   } catch (error) {

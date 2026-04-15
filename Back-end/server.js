@@ -87,6 +87,57 @@ async function ensureProductColumns() {
   }
 }
 
+async function ensureSellerColumns() {
+  const queryInterface = sequelize.getQueryInterface();
+  const sellerTable = await queryInterface.describeTable('Sellers');
+
+  const columnsToAdd = [
+    {
+      name: 'hasHomeDelivery',
+      definition: {
+        type: Sequelize.DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+      }
+    },
+    {
+      name: 'hasPhysicalStore',
+      definition: {
+        type: Sequelize.DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+      }
+    },
+    {
+      name: 'businessAddress',
+      definition: {
+        type: Sequelize.DataTypes.STRING,
+        allowNull: true
+      }
+    },
+    {
+      name: 'businessHours',
+      definition: {
+        type: Sequelize.DataTypes.STRING,
+        allowNull: true
+      }
+    },
+    {
+      name: 'businessNotes',
+      definition: {
+        type: Sequelize.DataTypes.TEXT,
+        allowNull: true
+      }
+    }
+  ];
+
+  for (const column of columnsToAdd) {
+    if (!sellerTable[column.name]) {
+      await queryInterface.addColumn('Sellers', column.name, column.definition);
+    }
+  }
+}
+
 async function ensureDatabaseExists() {
   if (process.env.NODE_ENV === 'development') {
     return;
@@ -144,6 +195,9 @@ async function startServer() {
 
     await ensureProductColumns();
     console.log('Columnas extendidas de productos verificadas correctamente');
+
+    await ensureSellerColumns();
+    console.log('Columnas extendidas del perfil de negocio verificadas correctamente');
 
     await ensureDefaultCategories();
     console.log('Categorias base verificadas correctamente');

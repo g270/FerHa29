@@ -17,6 +17,11 @@ const buildAuthUserPayload = (user, sellerProfile) => ({
         businessName: sellerProfile.businessName,
         description: sellerProfile.description,
         logoUrl: sellerProfile.logoUrl,
+        hasHomeDelivery: sellerProfile.hasHomeDelivery,
+        hasPhysicalStore: sellerProfile.hasPhysicalStore,
+        businessAddress: sellerProfile.businessAddress,
+        businessHours: sellerProfile.businessHours,
+        businessNotes: sellerProfile.businessNotes,
         rating: sellerProfile.rating,
         isVerified: sellerProfile.isVerified
       }
@@ -47,7 +52,12 @@ exports.registerUser = async (req, res, next) => {
         userId: user.id,
         businessName: `${firstName} ${lastName}`.trim() || email,
         description: '',
-        logoUrl: null
+        logoUrl: null,
+        hasHomeDelivery: false,
+        hasPhysicalStore: false,
+        businessAddress: address || null,
+        businessHours: null,
+        businessNotes: null
       });
     }
 
@@ -110,6 +120,11 @@ exports.getProfile = async (req, res, next) => {
             businessName: sellerProfile.businessName,
             description: sellerProfile.description,
             logoUrl: sellerProfile.logoUrl,
+            hasHomeDelivery: sellerProfile.hasHomeDelivery,
+            hasPhysicalStore: sellerProfile.hasPhysicalStore,
+            businessAddress: sellerProfile.businessAddress,
+            businessHours: sellerProfile.businessHours,
+            businessNotes: sellerProfile.businessNotes,
             rating: sellerProfile.rating,
             isVerified: sellerProfile.isVerified
           }
@@ -148,6 +163,11 @@ exports.updateProfile = async (req, res, next) => {
               businessName: sellerProfile.businessName,
               description: sellerProfile.description,
               logoUrl: sellerProfile.logoUrl,
+              hasHomeDelivery: sellerProfile.hasHomeDelivery,
+              hasPhysicalStore: sellerProfile.hasPhysicalStore,
+              businessAddress: sellerProfile.businessAddress,
+              businessHours: sellerProfile.businessHours,
+              businessNotes: sellerProfile.businessNotes,
               rating: sellerProfile.rating,
               isVerified: sellerProfile.isVerified
             }

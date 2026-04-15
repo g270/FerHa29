@@ -22,6 +22,28 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    hasHomeDelivery: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+    hasPhysicalStore: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+    businessAddress: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    businessHours: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    businessNotes: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
     rating: {
       type: DataTypes.DECIMAL(3, 2),
       defaultValue: 0
