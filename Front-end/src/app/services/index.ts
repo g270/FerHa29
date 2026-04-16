@@ -158,18 +158,81 @@ export class OrderService {
 
 @Injectable({ providedIn: 'root' })
 export class ServiceRequestService {
+  private readonly cacheTtlMs = 15000;
+
+  private serviceRequestsLoaded = false;
+  private lastServiceRequestsFetchAt = 0;
+  private cachedServiceRequests: ServiceRequest[] = [];
+  private pendingServiceRequestsRequest?: Observable<ServiceRequest[]>;
+
   constructor(private http: HttpClient) {}
 
-  getServiceRequests(): Observable<ServiceRequest[]> {
-    return this.http.get<ServiceRequest[]>(`${API_URL}/service-requests`);
+  getServiceRequests(forceRefresh = false): Observable<ServiceRequest[]> {
+    const cacheIsFresh = this.serviceRequestsLoaded && (Date.now() - this.lastServiceRequestsFetchAt) < this.cacheTtlMs;
+
+    if (!forceRefresh && cacheIsFresh) {
+      return of(this.cachedServiceRequests.map((request) => ({ ...request })));
+    }
+
+    if (!forceRefresh && this.pendingServiceRequestsRequest) {
+      return this.pendingServiceRequestsRequest.pipe(
+        map((requests) => requests.map((request) => ({ ...request })))
+      );
+    }
+
+    const request = this.http.get<ServiceRequest[]>(`${API_URL}/service-requests`).pipe(
+      tap((serviceRequests) => this.setServiceRequestsCache(serviceRequests)),
+      finalize(() => {
+        if (this.pendingServiceRequestsRequest === request) {
+          this.pendingServiceRequestsRequest = undefined;
+        }
+      }),
+      shareReplay(1)
+    );
+
+    this.pendingServiceRequestsRequest = request;
+    return request;
+  }
+
+  getCachedServiceRequests(): ServiceRequest[] | null {
+    if (!this.serviceRequestsLoaded) {
+      return null;
+    }
+
+    return this.cachedServiceRequests.map((request) => ({ ...request }));
   }
 
   createServiceRequest(payload: CreateServiceRequestPayload): Observable<ServiceRequest> {
-    return this.http.post<ServiceRequest>(`${API_URL}/service-requests`, payload);
+    return this.http.post<ServiceRequest>(`${API_URL}/service-requests`, payload).pipe(
+      tap(() => this.invalidateServiceRequestsCache())
+    );
   }
 
   updateServiceRequestStatus(id: string, payload: UpdateServiceRequestPayload): Observable<ServiceRequest> {
-    return this.http.put<ServiceRequest>(`${API_URL}/service-requests/${id}/status`, payload);
+    return this.http.put<ServiceRequest>(`${API_URL}/service-requests/${id}/status`, payload).pipe(
+      tap((updatedRequest) => {
+        if (!this.serviceRequestsLoaded) {
+          return;
+        }
+
+        this.cachedServiceRequests = this.cachedServiceRequests.map((request) =>
+          request.id === updatedRequest.id ? updatedRequest : request
+        );
+        this.lastServiceRequestsFetchAt = Date.now();
+      })
+    );
+  }
+
+  private setServiceRequestsCache(serviceRequests: ServiceRequest[]): void {
+    this.cachedServiceRequests = serviceRequests;
+    this.serviceRequestsLoaded = true;
+    this.lastServiceRequestsFetchAt = Date.now();
+  }
+
+  private invalidateServiceRequestsCache(): void {
+    this.serviceRequestsLoaded = false;
+    this.lastServiceRequestsFetchAt = 0;
+    this.pendingServiceRequestsRequest = undefined;
   }
 }
 

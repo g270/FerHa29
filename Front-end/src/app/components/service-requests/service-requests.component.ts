@@ -299,6 +299,33 @@ export class ServiceRequestsComponent implements OnInit {
   }
 
   loadRequests(): void {
+    const cachedRequests = this.serviceRequestService.getCachedServiceRequests();
+
+    if (cachedRequests) {
+      this.requests = cachedRequests;
+      this.filteredRequests = cachedRequests;
+      if (this.selectedRequestId && !cachedRequests.some((request) => request.id === this.selectedRequestId)) {
+        this.selectedRequestId = null;
+      }
+      this.syncResponseDrafts();
+      this.loading = false;
+
+      this.serviceRequestService.getServiceRequests(true).subscribe({
+        next: (requests) => {
+          this.requests = requests;
+          this.filteredRequests = requests;
+          if (this.selectedRequestId && !requests.some((request) => request.id === this.selectedRequestId)) {
+            this.selectedRequestId = null;
+          }
+          this.syncResponseDrafts();
+        },
+        error: (err: { error?: { message?: string } }) => {
+          this.error = err.error?.message || 'No se pudieron actualizar las solicitudes de servicio.';
+        }
+      });
+      return;
+    }
+
     this.loading = true;
     this.serviceRequestService.getServiceRequests().subscribe({
       next: (requests) => {
