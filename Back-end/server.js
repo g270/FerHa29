@@ -223,6 +223,30 @@ async function ensureServiceRequestColumns() {
   }
 }
 
+async function ensureNotificationIndexes() {
+  await sequelize.query(`
+    IF NOT EXISTS (
+      SELECT 1
+      FROM sys.indexes
+      WHERE name = 'IX_Notifications_User_CreatedAt'
+        AND object_id = OBJECT_ID('[dbo].[Notifications]')
+    )
+    CREATE NONCLUSTERED INDEX IX_Notifications_User_CreatedAt
+    ON [dbo].[Notifications] ([userId] ASC, [createdAt] DESC);
+  `);
+
+  await sequelize.query(`
+    IF NOT EXISTS (
+      SELECT 1
+      FROM sys.indexes
+      WHERE name = 'IX_Notifications_User_IsRead'
+        AND object_id = OBJECT_ID('[dbo].[Notifications]')
+    )
+    CREATE NONCLUSTERED INDEX IX_Notifications_User_IsRead
+    ON [dbo].[Notifications] ([userId] ASC, [isRead] ASC);
+  `);
+}
+
 async function ensureDatabaseExists() {
   if (process.env.NODE_ENV === 'development') {
     return;
@@ -286,6 +310,9 @@ async function startServer() {
 
     await ensureServiceRequestColumns();
     console.log('Columnas extendidas de solicitudes de servicio verificadas correctamente');
+
+    await ensureNotificationIndexes();
+    console.log('Indices de notificaciones verificados correctamente');
 
     await ensureDefaultCategories();
     console.log('Categorias base verificadas correctamente');

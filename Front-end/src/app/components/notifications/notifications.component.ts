@@ -65,8 +65,27 @@ export class NotificationsComponent implements OnInit {
   }
 
   loadNotifications(): void {
-    this.loading = true;
     this.error = '';
+    const cached = this.notificationService.getCachedResponse(50);
+
+    if (cached) {
+      this.notifications = cached.items;
+      this.unreadCount = cached.unreadCount;
+      this.loading = false;
+
+      this.notificationService.getNotifications(50, true).subscribe({
+        next: (response) => {
+          this.notifications = response.items;
+          this.unreadCount = response.unreadCount;
+        },
+        error: (err: { error?: { message?: string } }) => {
+          this.error = err.error?.message || 'No se pudieron actualizar las notificaciones.';
+        }
+      });
+      return;
+    }
+
+    this.loading = true;
 
     this.notificationService.getNotifications(50).subscribe({
       next: (response) => {

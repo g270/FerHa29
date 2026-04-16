@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, map, tap } from 'rxjs';
+import { BehaviorSubject, Observable, finalize, map, of, shareReplay, tap } from 'rxjs';
 import { AppNotification, AuthResponse, CartItem, Category, CreateOrderPayload, CreateServiceRequestPayload, NotificationResponse, Order, Product, Seller, ServiceRequest, UpdateServiceRequestPayload, User } from '../models/models';
 
 const API_URL = 'http://localhost:3001/api';
@@ -177,16 +177,54 @@ export class ServiceRequestService {
 export class NotificationService {
   private readonly notificationsSubject = new BehaviorSubject<AppNotification[]>([]);
   private readonly unreadCountSubject = new BehaviorSubject<number>(0);
+  private readonly cacheTtlMs = 15000;
+
+  private notificationsLoaded = false;
+  private lastNotificationsFetchAt = 0;
+  private pendingNotificationsRequest?: Observable<NotificationResponse>;
 
   notifications$ = this.notificationsSubject.asObservable();
   unreadCount$ = this.unreadCountSubject.asObservable();
 
   constructor(private http: HttpClient) {}
 
-  getNotifications(limit = 25): Observable<NotificationResponse> {
-    return this.http.get<NotificationResponse>(`${API_URL}/notifications?limit=${limit}`).pipe(
-      tap((response) => this.setNotificationState(response))
+  getNotifications(limit = 25, forceRefresh = false): Observable<NotificationResponse> {
+    const cachedResponse = this.getCachedResponse(limit);
+    const cacheIsFresh = cachedResponse && (Date.now() - this.lastNotificationsFetchAt) < this.cacheTtlMs;
+
+    if (!forceRefresh && cacheIsFresh) {
+      return of(cachedResponse);
+    }
+
+    if (!forceRefresh && this.pendingNotificationsRequest) {
+      return this.pendingNotificationsRequest.pipe(
+        map((response) => this.cloneNotificationResponse(response, limit))
+      );
+    }
+
+    const request = this.http.get<NotificationResponse>(`${API_URL}/notifications?limit=${limit}`).pipe(
+      tap((response) => this.setNotificationState(response)),
+      finalize(() => {
+        if (this.pendingNotificationsRequest === request) {
+          this.pendingNotificationsRequest = undefined;
+        }
+      }),
+      shareReplay(1)
     );
+
+    this.pendingNotificationsRequest = request;
+    return request;
+  }
+
+  getCachedResponse(limit = 25): NotificationResponse | null {
+    if (!this.notificationsLoaded) {
+      return null;
+    }
+
+    return this.cloneNotificationResponse({
+      items: this.notificationsSubject.value,
+      unreadCount: this.unreadCountSubject.value
+    }, limit);
   }
 
   markAsRead(id: string): Observable<AppNotification> {
@@ -214,11 +252,23 @@ export class NotificationService {
   clear(): void {
     this.notificationsSubject.next([]);
     this.unreadCountSubject.next(0);
+    this.notificationsLoaded = false;
+    this.lastNotificationsFetchAt = 0;
+    this.pendingNotificationsRequest = undefined;
   }
 
   private setNotificationState(response: NotificationResponse): void {
     this.notificationsSubject.next(response.items);
     this.unreadCountSubject.next(response.unreadCount);
+    this.notificationsLoaded = true;
+    this.lastNotificationsFetchAt = Date.now();
+  }
+
+  private cloneNotificationResponse(response: NotificationResponse, limit: number): NotificationResponse {
+    return {
+      items: response.items.slice(0, limit),
+      unreadCount: response.unreadCount
+    };
   }
 }
 
