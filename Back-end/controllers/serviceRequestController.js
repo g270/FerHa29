@@ -3,6 +3,8 @@ const { Notification, Product, Seller, ServiceRequest, User } = require('../mode
 const clientAttributes = ['id', 'email', 'firstName', 'lastName', 'phone', 'address', 'userType', 'createdAt', 'updatedAt'];
 const sellerAttributes = ['id', 'businessName', 'description', 'logoUrl', 'hasHomeDelivery', 'hasPhysicalStore', 'businessAddress', 'businessHours', 'businessNotes', 'rating', 'isVerified'];
 const validStatuses = ['pending', 'contacted', 'quoted', 'accepted', 'rejected', 'closed', 'cancelled'];
+const validFulfillmentStatuses = ['pending_schedule', 'scheduled', 'in_progress', 'completed'];
+const validServiceModes = ['domicilio', 'negocio', 'virtual'];
 const serviceRequestLink = '/service-requests';
 
 const buildInclude = () => ([
@@ -27,6 +29,21 @@ const getUserLabel = (user) => {
 };
 
 const getServiceLabel = (serviceRequest) => serviceRequest.product?.name || 'tu servicio';
+
+const getFulfillmentStatusLabel = (status) => {
+  switch (status) {
+    case 'pending_schedule':
+      return 'pendiente de agenda';
+    case 'scheduled':
+      return 'agendado';
+    case 'in_progress':
+      return 'en progreso';
+    case 'completed':
+      return 'completado';
+    default:
+      return status;
+  }
+};
 
 const createNotification = async ({ userId, title, message }) => {
   if (!userId) {
@@ -62,6 +79,15 @@ const notifyClientAboutSellerUpdate = async (serviceRequest, previousStatus) => 
   if (serviceRequest.status === 'quoted') {
     title = 'Cotización disponible';
     message = `${sellerName} cotizó tu solicitud de ${serviceLabel}${serviceRequest.quotedPrice != null ? ` por $ ${Number(serviceRequest.quotedPrice).toFixed(2)}` : ''}.`;
+  } else if (serviceRequest.fulfillmentStatus === 'scheduled') {
+    title = 'Cita programada';
+    message = `${sellerName} programó tu servicio de ${serviceLabel}${serviceRequest.appointmentAt ? ` para ${new Date(serviceRequest.appointmentAt).toLocaleString('es-ES')}` : ''}.`;
+  } else if (serviceRequest.fulfillmentStatus === 'in_progress') {
+    title = 'Servicio en progreso';
+    message = `${sellerName} marcó tu servicio de ${serviceLabel} como en progreso.`;
+  } else if (serviceRequest.fulfillmentStatus === 'completed') {
+    title = 'Servicio completado';
+    message = `${sellerName} marcó tu servicio de ${serviceLabel} como completado.`;
   } else if (serviceRequest.status === 'contacted') {
     title = 'Proveedor en contacto';
     message = `${sellerName} respondió tu solicitud de ${serviceLabel}.`;
@@ -93,7 +119,7 @@ const notifySellerAboutClientDecision = async (serviceRequest) => {
 
   if (serviceRequest.status === 'accepted') {
     title = 'Cotización aceptada';
-    message = `${clientLabel} aceptó la cotización de ${serviceLabel}.`;
+    message = `${clientLabel} aceptó la cotización de ${serviceLabel}. Ya puedes programar la cita.`;
   } else if (serviceRequest.status === 'rejected') {
     title = 'Cotización rechazada';
     message = `${clientLabel} rechazó la cotización de ${serviceLabel}.`;
@@ -185,7 +211,7 @@ exports.createServiceRequest = async (req, res, next) => {
 
 exports.updateServiceRequestStatus = async (req, res, next) => {
   try {
-    const { status, providerResponse, quotedPrice } = req.body;
+    const { status, providerResponse, quotedPrice, appointmentAt, serviceMode, serviceLocation, fulfillmentStatus } = req.body;
 
     if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({ message: 'El estado de la solicitud no es válido' });
@@ -197,6 +223,27 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
 
     if (parsedQuotedPrice !== null && (Number.isNaN(parsedQuotedPrice) || parsedQuotedPrice < 0)) {
       return res.status(400).json({ message: 'El monto cotizado no es válido' });
+    }
+
+    const normalizedAppointmentAt = appointmentAt === undefined
+      ? undefined
+      : appointmentAt === null || appointmentAt === ''
+        ? null
+        : new Date(appointmentAt);
+
+    if (normalizedAppointmentAt instanceof Date && Number.isNaN(normalizedAppointmentAt.getTime())) {
+      return res.status(400).json({ message: 'La fecha y hora de la cita no es válida' });
+    }
+
+    const normalizedServiceMode = serviceMode === undefined ? undefined : serviceMode?.trim() || null;
+    if (normalizedServiceMode && !validServiceModes.includes(normalizedServiceMode)) {
+      return res.status(400).json({ message: 'La modalidad del servicio no es válida' });
+    }
+
+    const normalizedServiceLocation = serviceLocation === undefined ? undefined : serviceLocation?.trim() || null;
+    const normalizedFulfillmentStatus = fulfillmentStatus === undefined ? undefined : fulfillmentStatus?.trim() || null;
+    if (normalizedFulfillmentStatus && !validFulfillmentStatuses.includes(normalizedFulfillmentStatus)) {
+      return res.status(400).json({ message: 'El seguimiento operativo del servicio no es válido' });
     }
 
     const serviceRequest = await ServiceRequest.findByPk(req.params.id, {
@@ -217,8 +264,41 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
         return res.status(400).json({ message: 'Debes indicar un monto cotizado para marcar la solicitud como cotizada' });
       }
 
-      if (['accepted', 'rejected'].includes(status)) {
+      if (['accepted', 'rejected'].includes(status) && status !== serviceRequest.status) {
         return res.status(403).json({ message: 'La aceptación o rechazo de la cotización corresponde al cliente' });
+      }
+
+      const hasSchedulingChanges = appointmentAt !== undefined
+        || serviceMode !== undefined
+        || serviceLocation !== undefined
+        || fulfillmentStatus !== undefined;
+
+      const effectiveStatus = status || serviceRequest.status;
+      if (hasSchedulingChanges && !['accepted', 'closed'].includes(effectiveStatus)) {
+        return res.status(400).json({ message: 'Solo puedes agendar o dar seguimiento a una solicitud aceptada' });
+      }
+
+      const effectiveFulfillmentStatus = normalizedFulfillmentStatus || serviceRequest.fulfillmentStatus || (hasSchedulingChanges ? 'scheduled' : null);
+      const effectiveAppointmentAt = normalizedAppointmentAt === undefined ? serviceRequest.appointmentAt : normalizedAppointmentAt;
+      const effectiveServiceMode = normalizedServiceMode === undefined ? serviceRequest.serviceMode : normalizedServiceMode;
+      const effectiveServiceLocation = normalizedServiceLocation === undefined ? serviceRequest.serviceLocation : normalizedServiceLocation;
+
+      if (effectiveFulfillmentStatus === 'scheduled') {
+        if (!effectiveAppointmentAt) {
+          return res.status(400).json({ message: 'Debes indicar fecha y hora para dejar el servicio agendado' });
+        }
+
+        if (!effectiveServiceMode) {
+          return res.status(400).json({ message: 'Debes indicar la modalidad del servicio para agendar la cita' });
+        }
+      }
+
+      if (effectiveFulfillmentStatus === 'in_progress' && !serviceRequest.appointmentAt && normalizedAppointmentAt === undefined) {
+        return res.status(400).json({ message: 'Debes programar primero la cita antes de iniciar el servicio' });
+      }
+
+      if (effectiveServiceMode && effectiveServiceMode !== 'virtual' && !effectiveServiceLocation) {
+        return res.status(400).json({ message: 'Debes indicar la dirección o punto de encuentro del servicio' });
       }
     } else if (req.userType === 'client') {
       if (serviceRequest.clientUserId !== req.userId) {
@@ -233,6 +313,10 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
       if (['accepted', 'rejected'].includes(status) && serviceRequest.status !== 'quoted') {
         return res.status(400).json({ message: 'Solo puedes aceptar o rechazar una solicitud que ya fue cotizada' });
       }
+
+      if (appointmentAt !== undefined || serviceMode !== undefined || serviceLocation !== undefined || fulfillmentStatus !== undefined) {
+        return res.status(403).json({ message: 'Solo el proveedor puede agendar y dar seguimiento operativo al servicio' });
+      }
     } else if (req.userType !== 'admin') {
       return res.status(403).json({ message: 'No tienes permisos para actualizar esta solicitud' });
     }
@@ -240,11 +324,45 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
     const previousStatus = serviceRequest.status;
     const previousResponse = serviceRequest.providerResponse;
     const previousQuotedPrice = serviceRequest.quotedPrice;
+    const previousAppointmentAt = serviceRequest.appointmentAt;
+    const previousServiceMode = serviceRequest.serviceMode;
+    const previousServiceLocation = serviceRequest.serviceLocation;
+    const previousFulfillmentStatus = serviceRequest.fulfillmentStatus;
     const updatePayload = { status };
 
     if (req.userType === 'seller') {
       updatePayload.providerResponse = providerResponse?.trim() || null;
       updatePayload.quotedPrice = parsedQuotedPrice;
+
+      if (normalizedAppointmentAt !== undefined) {
+        updatePayload.appointmentAt = normalizedAppointmentAt;
+      }
+
+      if (normalizedServiceMode !== undefined) {
+        updatePayload.serviceMode = normalizedServiceMode;
+      }
+
+      if (normalizedServiceLocation !== undefined) {
+        updatePayload.serviceLocation = normalizedServiceLocation;
+      }
+
+      if (normalizedFulfillmentStatus !== undefined) {
+        updatePayload.fulfillmentStatus = normalizedFulfillmentStatus;
+      } else if (
+        status === 'accepted'
+        && (normalizedAppointmentAt !== undefined || normalizedServiceMode !== undefined || normalizedServiceLocation !== undefined)
+      ) {
+        updatePayload.fulfillmentStatus = 'scheduled';
+      }
+
+      if (updatePayload.fulfillmentStatus === 'completed' || status === 'closed') {
+        updatePayload.fulfillmentStatus = 'completed';
+        updatePayload.status = 'closed';
+      }
+    }
+
+    if (req.userType === 'client' && status === 'accepted' && !serviceRequest.fulfillmentStatus) {
+      updatePayload.fulfillmentStatus = 'pending_schedule';
     }
 
     await serviceRequest.update(updatePayload);
@@ -253,6 +371,10 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
       previousStatus !== serviceRequest.status
       || previousResponse !== serviceRequest.providerResponse
       || Number(previousQuotedPrice || 0) !== Number(serviceRequest.quotedPrice || 0)
+      || String(previousAppointmentAt || '') !== String(serviceRequest.appointmentAt || '')
+      || String(previousServiceMode || '') !== String(serviceRequest.serviceMode || '')
+      || String(previousServiceLocation || '') !== String(serviceRequest.serviceLocation || '')
+      || String(previousFulfillmentStatus || '') !== String(serviceRequest.fulfillmentStatus || '')
     );
 
     if (shouldNotifyClient) {

@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { AuthService, ServiceRequestService } from '../../services/index';
-import { ServiceRequest, ServiceRequestStatus, User } from '../../models/models';
+import { ServiceFulfillmentStatus, ServiceRequest, ServiceRequestStatus, User } from '../../models/models';
 
 @Component({
   selector: 'app-service-requests',
@@ -54,6 +54,17 @@ import { ServiceRequest, ServiceRequestStatus, User } from '../../models/models'
               <p *ngIf="request.quotedPrice != null"><strong>Monto cotizado:</strong> {{ getQuotedPriceLabel(request) }}</p>
             </div>
 
+            <div class="schedule-box" *ngIf="hasScheduleInfo(request)">
+              <p *ngIf="request.fulfillmentStatus"><strong>Seguimiento:</strong> {{ getFulfillmentStatusLabel(request.fulfillmentStatus) }}</p>
+              <p *ngIf="request.appointmentAt"><strong>Cita:</strong> {{ request.appointmentAt | date:'medium' }}</p>
+              <p *ngIf="request.serviceMode"><strong>Modalidad:</strong> {{ getServiceModeLabel(request.serviceMode) }}</p>
+              <p *ngIf="request.serviceLocation"><strong>Lugar:</strong> {{ request.serviceLocation }}</p>
+            </div>
+
+            <p class="schedule-hint" *ngIf="request.status === 'accepted' && request.fulfillmentStatus === 'pending_schedule'">
+              {{ isSeller ? 'Esta solicitud ya fue aceptada. Define fecha, modalidad y lugar para programar la cita.' : 'Tu cotización fue aceptada. El proveedor debe programar la cita.' }}
+            </p>
+
             <p><strong>Creada:</strong> {{ request.createdAt | date:'medium' }}</p>
 
             <div class="client-decision" *ngIf="!isSeller && request.status === 'quoted'">
@@ -90,6 +101,54 @@ import { ServiceRequest, ServiceRequestStatus, User } from '../../models/models'
                 />
               </label>
 
+              <div class="schedule-fields" *ngIf="request.status === 'accepted' || request.status === 'closed'">
+                <label>
+                  <span>Fecha y hora acordada</span>
+                  <input
+                    type="datetime-local"
+                    [ngModel]="responseDrafts[request.id].appointmentAt"
+                    (ngModelChange)="responseDrafts[request.id].appointmentAt = $event || ''"
+                    [ngModelOptions]="{ standalone: true }"
+                  />
+                </label>
+
+                <label>
+                  <span>Modalidad del servicio</span>
+                  <select
+                    [ngModel]="responseDrafts[request.id].serviceMode"
+                    (ngModelChange)="responseDrafts[request.id].serviceMode = $event || ''"
+                    [ngModelOptions]="{ standalone: true }"
+                  >
+                    <option value="">Selecciona una opción</option>
+                    <option value="domicilio">A domicilio</option>
+                    <option value="negocio">En negocio/local</option>
+                    <option value="virtual">Virtual</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Dirección o punto de encuentro</span>
+                  <input
+                    type="text"
+                    [ngModel]="responseDrafts[request.id].serviceLocation"
+                    (ngModelChange)="responseDrafts[request.id].serviceLocation = $event"
+                    [ngModelOptions]="{ standalone: true }"
+                    placeholder="Ej. Calle 10 # 20-30, consultorio 4 o enlace de videollamada"
+                  />
+                </label>
+
+                <label>
+                  <span>Seguimiento operativo</span>
+                  <select
+                    [ngModel]="responseDrafts[request.id].fulfillmentStatus"
+                    (ngModelChange)="responseDrafts[request.id].fulfillmentStatus = $event"
+                    [ngModelOptions]="{ standalone: true }"
+                  >
+                    <option *ngFor="let fulfillment of fulfillmentOptions" [value]="fulfillment">{{ getFulfillmentStatusLabel(fulfillment) }}</option>
+                  </select>
+                </label>
+              </div>
+
               <button type="button" class="btn-save" (click)="updateStatus(request)" [disabled]="updatingId === request.id">
                 {{ updatingId === request.id ? 'Guardando...' : 'Guardar respuesta' }}
               </button>
@@ -116,9 +175,18 @@ export class ServiceRequestsComponent implements OnInit {
   errorMessage = '';
   updatingId: string | null = null;
   currentUser: User | null = null;
-  responseDrafts: Record<string, { status: ServiceRequestStatus; providerResponse: string; quotedPrice: number | null }> = {};
+  responseDrafts: Record<string, {
+    status: ServiceRequestStatus;
+    providerResponse: string;
+    quotedPrice: number | null;
+    appointmentAt: string;
+    serviceMode: string;
+    serviceLocation: string;
+    fulfillmentStatus: ServiceFulfillmentStatus;
+  }> = {};
 
-  readonly statusOptions: ServiceRequestStatus[] = ['pending', 'contacted', 'quoted', 'closed', 'cancelled'];
+  readonly statusOptions: ServiceRequestStatus[] = ['pending', 'contacted', 'quoted', 'accepted', 'rejected', 'closed', 'cancelled'];
+  readonly fulfillmentOptions: ServiceFulfillmentStatus[] = ['pending_schedule', 'scheduled', 'in_progress', 'completed'];
 
   constructor(
     private authService: AuthService,
@@ -163,10 +231,18 @@ export class ServiceRequestsComponent implements OnInit {
     const previousStatus = request.status;
     const previousResponse = request.providerResponse;
     const previousQuotedPrice = request.quotedPrice;
+    const previousAppointmentAt = request.appointmentAt;
+    const previousServiceMode = request.serviceMode;
+    const previousServiceLocation = request.serviceLocation;
+    const previousFulfillmentStatus = request.fulfillmentStatus;
 
     request.status = draft.status;
     request.providerResponse = draft.providerResponse.trim() || undefined;
     request.quotedPrice = draft.quotedPrice ?? undefined;
+    request.appointmentAt = draft.appointmentAt || undefined;
+    request.serviceMode = draft.serviceMode || undefined;
+    request.serviceLocation = draft.serviceLocation.trim() || undefined;
+    request.fulfillmentStatus = draft.fulfillmentStatus || undefined;
     this.updatingId = request.id;
     this.message = '';
     this.errorMessage = '';
@@ -174,16 +250,28 @@ export class ServiceRequestsComponent implements OnInit {
     this.serviceRequestService.updateServiceRequestStatus(request.id, {
       status: draft.status,
       providerResponse: draft.providerResponse,
-      quotedPrice: draft.quotedPrice
+      quotedPrice: draft.quotedPrice,
+      appointmentAt: draft.appointmentAt || null,
+      serviceMode: draft.serviceMode || null,
+      serviceLocation: draft.serviceLocation.trim() || null,
+      fulfillmentStatus: draft.fulfillmentStatus || null
     }).subscribe({
       next: (updated) => {
         request.status = updated.status;
         request.providerResponse = updated.providerResponse;
         request.quotedPrice = updated.quotedPrice;
+        request.appointmentAt = updated.appointmentAt;
+        request.serviceMode = updated.serviceMode;
+        request.serviceLocation = updated.serviceLocation;
+        request.fulfillmentStatus = updated.fulfillmentStatus;
         this.responseDrafts[request.id] = {
           status: updated.status,
           providerResponse: updated.providerResponse || '',
-          quotedPrice: updated.quotedPrice ?? null
+          quotedPrice: updated.quotedPrice ?? null,
+          appointmentAt: this.toDateTimeLocalValue(updated.appointmentAt),
+          serviceMode: updated.serviceMode || '',
+          serviceLocation: updated.serviceLocation || '',
+          fulfillmentStatus: updated.fulfillmentStatus || 'pending_schedule'
         };
         this.updatingId = null;
         this.message = `Solicitud #${request.id.slice(0, 8)} actualizada a ${this.getStatusLabel(updated.status)}.`;
@@ -192,6 +280,10 @@ export class ServiceRequestsComponent implements OnInit {
         request.status = previousStatus;
         request.providerResponse = previousResponse;
         request.quotedPrice = previousQuotedPrice;
+        request.appointmentAt = previousAppointmentAt;
+        request.serviceMode = previousServiceMode;
+        request.serviceLocation = previousServiceLocation;
+        request.fulfillmentStatus = previousFulfillmentStatus;
         this.updatingId = null;
         this.errorMessage = err.error?.message || 'No se pudo actualizar la solicitud.';
       }
@@ -248,6 +340,38 @@ export class ServiceRequestsComponent implements OnInit {
     return request.quotedPrice != null ? `$ ${Number(request.quotedPrice).toFixed(2)}` : 'Pendiente';
   }
 
+  hasScheduleInfo(request: ServiceRequest): boolean {
+    return Boolean(request.appointmentAt || request.serviceMode || request.serviceLocation || request.fulfillmentStatus);
+  }
+
+  getServiceModeLabel(mode: string): string {
+    switch (mode) {
+      case 'domicilio':
+        return 'A domicilio';
+      case 'negocio':
+        return 'En negocio o local';
+      case 'virtual':
+        return 'Virtual';
+      default:
+        return mode;
+    }
+  }
+
+  getFulfillmentStatusLabel(status: ServiceFulfillmentStatus): string {
+    switch (status) {
+      case 'pending_schedule':
+        return 'Pendiente de agenda';
+      case 'scheduled':
+        return 'Agendado';
+      case 'in_progress':
+        return 'En progreso';
+      case 'completed':
+        return 'Completado';
+      default:
+        return status;
+    }
+  }
+
   toNullableNumber(value: string | number | null): number | null {
     if (value === '' || value === null) {
       return null;
@@ -267,14 +391,40 @@ export class ServiceRequestsComponent implements OnInit {
     return fullName || client.email;
   }
 
+  private toDateTimeLocalValue(value?: string): string {
+    if (!value) {
+      return '';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    const normalizedDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return normalizedDate.toISOString().slice(0, 16);
+  }
+
   private syncResponseDrafts(): void {
     this.responseDrafts = this.requests.reduce((drafts, request) => {
       drafts[request.id] = {
         status: request.status,
         providerResponse: request.providerResponse || '',
-        quotedPrice: request.quotedPrice ?? null
+        quotedPrice: request.quotedPrice ?? null,
+        appointmentAt: this.toDateTimeLocalValue(request.appointmentAt),
+        serviceMode: request.serviceMode || '',
+        serviceLocation: request.serviceLocation || '',
+        fulfillmentStatus: request.fulfillmentStatus || 'pending_schedule'
       };
       return drafts;
-    }, {} as Record<string, { status: ServiceRequestStatus; providerResponse: string; quotedPrice: number | null }>);
+    }, {} as Record<string, {
+      status: ServiceRequestStatus;
+      providerResponse: string;
+      quotedPrice: number | null;
+      appointmentAt: string;
+      serviceMode: string;
+      serviceLocation: string;
+      fulfillmentStatus: ServiceFulfillmentStatus;
+    }>);
   }
 }

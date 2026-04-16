@@ -164,6 +164,34 @@ async function ensureServiceRequestColumns() {
         type: Sequelize.DataTypes.DECIMAL(10, 2),
         allowNull: true
       }
+    },
+    {
+      name: 'appointmentAt',
+      definition: {
+        type: Sequelize.DataTypes.DATE,
+        allowNull: true
+      }
+    },
+    {
+      name: 'serviceMode',
+      definition: {
+        type: Sequelize.DataTypes.STRING,
+        allowNull: true
+      }
+    },
+    {
+      name: 'serviceLocation',
+      definition: {
+        type: Sequelize.DataTypes.STRING,
+        allowNull: true
+      }
+    },
+    {
+      name: 'fulfillmentStatus',
+      definition: {
+        type: Sequelize.DataTypes.STRING,
+        allowNull: true
+      }
     }
   ];
 

@@ -34,6 +34,22 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true
     },
+    appointmentAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    serviceMode: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    serviceLocation: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    fulfillmentStatus: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     status: {
       type: DataTypes.STRING,
       allowNull: false,

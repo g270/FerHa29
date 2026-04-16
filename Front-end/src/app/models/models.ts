@@ -37,6 +37,7 @@ export interface Seller {
 }
 
 export type ServiceRequestStatus = 'pending' | 'contacted' | 'quoted' | 'accepted' | 'rejected' | 'closed' | 'cancelled';
+export type ServiceFulfillmentStatus = 'pending_schedule' | 'scheduled' | 'in_progress' | 'completed';
 
 export interface Category {
   id: string;
@@ -92,6 +93,10 @@ export interface ServiceRequest {
   preferredSchedule?: string;
   providerResponse?: string;
   quotedPrice?: number;
+  appointmentAt?: string;
+  serviceMode?: 'domicilio' | 'negocio' | 'virtual' | string;
+  serviceLocation?: string;
+  fulfillmentStatus?: ServiceFulfillmentStatus;
   status: ServiceRequestStatus;
   createdAt?: string;
   updatedAt?: string;
@@ -110,6 +115,10 @@ export interface UpdateServiceRequestPayload {
   status: ServiceRequestStatus;
   providerResponse?: string;
   quotedPrice?: number | null;
+  appointmentAt?: string | null;
+  serviceMode?: string | null;
+  serviceLocation?: string | null;
+  fulfillmentStatus?: ServiceFulfillmentStatus | null;
 }
 
 export interface AppNotification {

@@ -85,6 +85,20 @@
   border: 1px solid #e2e8f0;
 }
 
+.schedule-box {
+  margin-top: 0.85rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.schedule-hint {
+  margin-top: 0.8rem;
+  color: #166534;
+  font-weight: 600;
+}
+
 .seller-response-form {
   display: grid;
   gap: 0.85rem;
@@ -104,12 +118,22 @@
 }
 
 .seller-response-form textarea,
-.seller-response-form input {
+.seller-response-form input,
+.seller-response-form select {
   width: 100%;
   border: 1px solid #cbd5e1;
   border-radius: 12px;
   padding: 0.75rem 0.9rem;
   font: inherit;
+}
+
+.schedule-fields {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
 }
 
 .btn-save {
