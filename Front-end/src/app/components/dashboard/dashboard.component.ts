@@ -380,6 +380,22 @@ export class DashboardComponent implements OnInit {
     this.productsLoading = true;
     this.productMessage = '';
     this.productError = '';
+    const cachedProducts = this.productService.getCachedProducts();
+    if (cachedProducts) {
+      this.sellerProducts = cachedProducts.filter((product) => product.sellerId === this.user?.sellerProfile?.id);
+      this.productsLoading = false;
+
+      this.productService.getProducts(true).subscribe({
+        next: (products) => {
+          this.sellerProducts = products.filter((product) => product.sellerId === this.user?.sellerProfile?.id);
+        },
+        error: () => {
+          this.productError = 'No se pudieron actualizar las publicaciones del negocio.';
+        }
+      });
+      return;
+    }
+
     this.productService.getProducts().subscribe({
       next: (products) => {
         this.sellerProducts = products.filter((product) => product.sellerId === this.user?.sellerProfile?.id);

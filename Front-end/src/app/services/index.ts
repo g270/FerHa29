@@ -82,10 +82,48 @@ export class AuthService {
 
 @Injectable({ providedIn: 'root' })
 export class ProductService {
+  private readonly cacheTtlMs = 15000;
+
+  private productsLoaded = false;
+  private lastProductsFetchAt = 0;
+  private cachedProducts: Product[] = [];
+  private pendingProductsRequest?: Observable<Product[]>;
+
   constructor(private http: HttpClient) {}
 
-  getProducts(): Observable<Product[]> {
-    return this.http.get<Product[]>(`${API_URL}/products`);
+  getProducts(forceRefresh = false): Observable<Product[]> {
+    const cacheIsFresh = this.productsLoaded && (Date.now() - this.lastProductsFetchAt) < this.cacheTtlMs;
+
+    if (!forceRefresh && cacheIsFresh) {
+      return of(this.cachedProducts.map((product) => ({ ...product })));
+    }
+
+    if (!forceRefresh && this.pendingProductsRequest) {
+      return this.pendingProductsRequest.pipe(
+        map((products) => products.map((product) => ({ ...product })))
+      );
+    }
+
+    const request = this.http.get<Product[]>(`${API_URL}/products`).pipe(
+      tap((products) => this.setProductsCache(products)),
+      finalize(() => {
+        if (this.pendingProductsRequest === request) {
+          this.pendingProductsRequest = undefined;
+        }
+      }),
+      shareReplay(1)
+    );
+
+    this.pendingProductsRequest = request;
+    return request;
+  }
+
+  getCachedProducts(): Product[] | null {
+    if (!this.productsLoaded) {
+      return null;
+    }
+
+    return this.cachedProducts.map((product) => ({ ...product }));
   }
 
   getProductById(id: string): Observable<Product> {
@@ -93,15 +131,49 @@ export class ProductService {
   }
 
   createProduct(product: Partial<Product>): Observable<Product> {
-    return this.http.post<Product>(`${API_URL}/products`, product);
+    return this.http.post<Product>(`${API_URL}/products`, product).pipe(
+      tap(() => this.invalidateProductsCache())
+    );
   }
 
   updateProduct(id: string, product: Partial<Product>): Observable<Product> {
-    return this.http.put<Product>(`${API_URL}/products/${id}`, product);
+    return this.http.put<Product>(`${API_URL}/products/${id}`, product).pipe(
+      tap((updatedProduct) => {
+        if (!this.productsLoaded) {
+          return;
+        }
+
+        this.cachedProducts = this.cachedProducts.map((item) =>
+          item.id === updatedProduct.id ? updatedProduct : item
+        );
+        this.lastProductsFetchAt = Date.now();
+      })
+    );
   }
 
   deleteProduct(id: string): Observable<void> {
-    return this.http.delete<void>(`${API_URL}/products/${id}`);
+    return this.http.delete<void>(`${API_URL}/products/${id}`).pipe(
+      tap(() => {
+        if (!this.productsLoaded) {
+          return;
+        }
+
+        this.cachedProducts = this.cachedProducts.filter((product) => product.id !== id);
+        this.lastProductsFetchAt = Date.now();
+      })
+    );
+  }
+
+  private setProductsCache(products: Product[]): void {
+    this.cachedProducts = products;
+    this.productsLoaded = true;
+    this.lastProductsFetchAt = Date.now();
+  }
+
+  private invalidateProductsCache(): void {
+    this.productsLoaded = false;
+    this.lastProductsFetchAt = 0;
+    this.pendingProductsRequest = undefined;
   }
 }
 

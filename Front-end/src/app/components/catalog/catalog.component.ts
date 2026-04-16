@@ -173,8 +173,28 @@ export class CatalogComponent implements OnInit {
   }
 
   loadProducts(): void {
-    this.loading = true;
     this.error = '';
+
+    const cachedProducts = this.productService.getCachedProducts();
+    if (cachedProducts) {
+      this.products = cachedProducts;
+      this.applyFilters();
+      this.loading = false;
+
+      this.productService.getProducts(true).subscribe({
+        next: (data) => {
+          this.products = data;
+          this.applyFilters();
+        },
+        error: (err: unknown) => {
+          console.error('Error al actualizar productos', err);
+          this.error = 'Error al actualizar productos. Intenta de nuevo.';
+        }
+      });
+      return;
+    }
+
+    this.loading = true;
 
     this.productService.getProducts().subscribe({
       next: (data) => {

@@ -1,11 +1,15 @@
 const { Product, Category, Seller } = require('../models');
 
+const categoryAttributes = ['id', 'name'];
+const sellerAttributes = ['id', 'userId', 'businessName', 'logoUrl', 'rating', 'isVerified'];
+
 exports.listProducts = async (req, res, next) => {
   try {
     const products = await Product.findAll({
+      order: [['createdAt', 'DESC']],
       include: [
-        { model: Category, as: 'category' },
-        { model: Seller, as: 'seller' }
+        { model: Category, as: 'category', attributes: categoryAttributes },
+        { model: Seller, as: 'seller', attributes: sellerAttributes }
       ]
     });
     res.json(products);
