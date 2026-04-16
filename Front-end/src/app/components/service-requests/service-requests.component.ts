@@ -19,8 +19,56 @@ import { ServiceFulfillmentStatus, ServiceRequest, ServiceRequestStatus, User } 
       <div class="state" *ngIf="loading">Cargando solicitudes...</div>
       <div class="state error" *ngIf="error">{{ error }}</div>
 
+      <section class="calendar-panel card" *ngIf="!loading && isSeller">
+        <div class="calendar-header">
+          <div>
+            <p class="eyebrow">Agenda operativa</p>
+            <h2>Calendario semanal</h2>
+            <p class="calendar-copy">Visualiza las citas programadas, ubica huecos disponibles y entra directo a la solicitud para ajustarla.</p>
+          </div>
+
+          <div class="calendar-actions">
+            <button type="button" class="calendar-btn" (click)="goToPreviousWeek()">Semana anterior</button>
+            <button type="button" class="calendar-btn" (click)="goToCurrentWeek()">Hoy</button>
+            <button type="button" class="calendar-btn" (click)="goToNextWeek()">Semana siguiente</button>
+          </div>
+        </div>
+
+        <p class="calendar-range">{{ getWeekRangeLabel() }}</p>
+
+        <div class="calendar-grid">
+          <article class="calendar-day" *ngFor="let day of getCalendarDays()" [class.calendar-day-today]="day.isToday">
+            <div class="calendar-day-head">
+              <span class="calendar-day-name">{{ day.label }}</span>
+              <strong>{{ day.dayNumber }}</strong>
+            </div>
+
+            <div class="calendar-day-body" *ngIf="day.entries.length > 0; else emptyDay">
+              <button
+                type="button"
+                class="calendar-entry"
+                *ngFor="let entry of day.entries"
+                [class.calendar-entry-active]="selectedRequestId === entry.request.id"
+                [class.calendar-entry-progress]="entry.request.fulfillmentStatus === 'in_progress'"
+                [class.calendar-entry-completed]="entry.request.fulfillmentStatus === 'completed'"
+                (click)="focusRequest(entry.request.id)"
+              >
+                <span class="calendar-entry-time">{{ entry.startLabel }} - {{ entry.endLabel }}</span>
+                <strong>{{ entry.request.product?.name || 'Servicio' }}</strong>
+                <span>{{ getClientLabel(entry.request) }}</span>
+                <span>{{ getFulfillmentStatusLabel(entry.request.fulfillmentStatus || 'pending_schedule') }}</span>
+              </button>
+            </div>
+
+            <ng-template #emptyDay>
+              <p class="calendar-empty">Sin citas registradas</p>
+            </ng-template>
+          </article>
+        </div>
+      </section>
+
       <div class="request-list" *ngIf="!loading && filteredRequests.length > 0">
-        <article class="request-card card" *ngFor="let request of filteredRequests">
+        <article class="request-card card" *ngFor="let request of filteredRequests" [class.request-card-selected]="selectedRequestId === request.id">
           <div class="request-head">
             <div>
               <p class="request-id">#{{ request.id.slice(0, 8) }}</p>
@@ -218,6 +266,8 @@ export class ServiceRequestsComponent implements OnInit {
   errorMessage = '';
   updatingId: string | null = null;
   currentUser: User | null = null;
+  selectedRequestId: string | null = null;
+  currentWeekStart = this.getStartOfWeek(new Date());
   responseDrafts: Record<string, {
     status: ServiceRequestStatus;
     providerResponse: string;
@@ -254,6 +304,9 @@ export class ServiceRequestsComponent implements OnInit {
       next: (requests) => {
         this.requests = requests;
         this.filteredRequests = requests;
+        if (this.selectedRequestId && !requests.some((request) => request.id === this.selectedRequestId)) {
+          this.selectedRequestId = null;
+        }
         this.syncResponseDrafts();
         this.loading = false;
       },
@@ -415,6 +468,59 @@ export class ServiceRequestsComponent implements OnInit {
     return Boolean(request.appointmentAt || request.appointmentDurationMinutes || request.serviceMode || request.serviceLocation || request.fulfillmentStatus || request.completionNotes || request.completionEvidence);
   }
 
+  getCalendarDays(): Array<{
+    date: Date;
+    label: string;
+    dayNumber: string;
+    isToday: boolean;
+    entries: Array<{
+      request: ServiceRequest;
+      startLabel: string;
+      endLabel: string;
+      startAt: Date;
+    }>;
+  }> {
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(this.currentWeekStart);
+      date.setDate(this.currentWeekStart.getDate() + index);
+
+      return {
+        date,
+        label: date.toLocaleDateString('es-ES', { weekday: 'short' }),
+        dayNumber: date.toLocaleDateString('es-ES', { day: '2-digit' }),
+        isToday: this.isSameDay(date, new Date()),
+        entries: this.getCalendarEntriesForDate(date)
+      };
+    });
+  }
+
+  getWeekRangeLabel(): string {
+    const weekEnd = new Date(this.currentWeekStart);
+    weekEnd.setDate(this.currentWeekStart.getDate() + 6);
+
+    return `${this.currentWeekStart.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} - ${weekEnd.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+  }
+
+  goToPreviousWeek(): void {
+    const previousWeek = new Date(this.currentWeekStart);
+    previousWeek.setDate(previousWeek.getDate() - 7);
+    this.currentWeekStart = this.getStartOfWeek(previousWeek);
+  }
+
+  goToNextWeek(): void {
+    const nextWeek = new Date(this.currentWeekStart);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    this.currentWeekStart = this.getStartOfWeek(nextWeek);
+  }
+
+  goToCurrentWeek(): void {
+    this.currentWeekStart = this.getStartOfWeek(new Date());
+  }
+
+  focusRequest(requestId: string): void {
+    this.selectedRequestId = requestId;
+  }
+
   getScheduleConflictMessage(request: ServiceRequest): string {
     if (!this.isSeller) {
       return '';
@@ -521,6 +627,45 @@ export class ServiceRequestsComponent implements OnInit {
 
     const normalizedDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
     return normalizedDate.toISOString().slice(0, 16);
+  }
+
+  private getCalendarEntriesForDate(date: Date): Array<{
+    request: ServiceRequest;
+    startLabel: string;
+    endLabel: string;
+    startAt: Date;
+  }> {
+    return this.filteredRequests
+      .filter((request) => Boolean(request.appointmentAt))
+      .map((request) => {
+        const startAt = new Date(request.appointmentAt || '');
+        const durationMinutes = request.appointmentDurationMinutes ?? 60;
+        const endAt = new Date(startAt.getTime() + durationMinutes * 60000);
+
+        return {
+          request,
+          startAt,
+          startLabel: startAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+          endLabel: endAt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+        };
+      })
+      .filter((entry) => !Number.isNaN(entry.startAt.getTime()) && this.isSameDay(entry.startAt, date))
+      .sort((left, right) => left.startAt.getTime() - right.startAt.getTime());
+  }
+
+  private getStartOfWeek(value: Date): Date {
+    const date = new Date(value);
+    const day = date.getDay();
+    const offset = day === 0 ? -6 : 1 - day;
+    date.setDate(date.getDate() + offset);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }
+
+  private isSameDay(left: Date, right: Date): boolean {
+    return left.getFullYear() === right.getFullYear()
+      && left.getMonth() === right.getMonth()
+      && left.getDate() === right.getDate();
   }
 
   private syncResponseDrafts(): void {

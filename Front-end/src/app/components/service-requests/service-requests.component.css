@@ -23,6 +23,124 @@
   max-width: 760px;
 }
 
+.calendar-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.calendar-copy {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+  max-width: 720px;
+}
+
+.calendar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.calendar-btn {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 700;
+  padding: 0.7rem 0.95rem;
+  cursor: pointer;
+}
+
+.calendar-range {
+  margin: 0;
+  color: #0f766e;
+  font-weight: 800;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.calendar-day {
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.85rem;
+  min-height: 220px;
+}
+
+.calendar-day-today {
+  border-color: #0f766e;
+  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.12);
+}
+
+.calendar-day-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.calendar-day-name {
+  text-transform: capitalize;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.calendar-day-body {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.calendar-entry {
+  width: 100%;
+  text-align: left;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #0f172a;
+  border-radius: 14px;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.2rem;
+  cursor: pointer;
+}
+
+.calendar-entry-active {
+  border-color: #0f766e;
+  background: #ecfeff;
+}
+
+.calendar-entry-progress {
+  border-color: #fdba74;
+  background: #fff7ed;
+}
+
+.calendar-entry-completed {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.calendar-entry-time {
+  color: #0f766e;
+  font-weight: 800;
+}
+
+.calendar-empty {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.95rem;
+}
+
 .request-list {
   display: grid;
   gap: 1rem;
@@ -31,6 +149,11 @@
 .request-card {
   display: grid;
   gap: 1rem;
+}
+
+.request-card-selected {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.14);
 }
 
 .request-head {
@@ -208,6 +331,14 @@
 }
 
 @media (max-width: 768px) {
+  .calendar-header {
+    flex-direction: column;
+  }
+
+  .calendar-grid {
+    grid-template-columns: 1fr;
+  }
+
   .request-head {
     flex-direction: column;
   }
