@@ -142,6 +142,9 @@ Estas son mejoras de negocio ya materializadas, no sólo técnicas:
 - Mejor comunicación visual del estado de carrito, pedidos y publicaciones.
 - Mayor trazabilidad de compra tras confirmar una orden.
 - Mejor separación entre experiencia del cliente y del proveedor.
+- Sistema interno de notificaciones para solicitudes de servicio y pedidos.
+- Flujo de servicios ampliado desde solicitud y cotización hasta aceptación del cliente.
+- Nuevo tramo operativo para servicios aceptados: agenda, modalidad, lugar, inicio y cierre del servicio.
 
 ## 6. Mejoras pendientes o parcialmente resueltas
 
@@ -170,7 +173,8 @@ No existe todavía una sección consolidada del negocio del proveedor donde se c
 - dirección comercial estructurada
 - datos de contacto operativos del negocio
 - políticas globales de entrega y retiro
-- posible distinción formal entre productos y servicios
+- historial operativo más completo para servicios ya ejecutados
+- observaciones finales y cierre documental del servicio
 
 ## 7. Validaciones ya realizadas
 
@@ -178,6 +182,7 @@ No existe todavía una sección consolidada del negocio del proveedor donde se c
 - Flujo de categorías validado tras corrección de llaves foráneas.
 - Backend ajustado para cálculo seguro de precios en checkout.
 - Mejoras recientes enfocadas en que el usuario sí vea que el producto fue agregado al carrito.
+- Validación end-to-end del flujo de solicitudes de servicio con cotización, aceptación, agenda, seguimiento y cierre.
 
 ## 8. Recomendación sobre respaldo
 
@@ -222,5 +227,57 @@ Antes de seguir con nuevas mejoras, sí conviene generar respaldo de:
 - Front-end
 - Back-end
 - base de datos, si contiene datos de prueba o configuración útil
+
+## 9. Estado de seguridad validado en local y publicado
+
+Fecha de validación: 15 de abril de 2026
+
+### 9.1 Commits publicados relacionados con saneamiento y validación
+
+- 73629be chore: actualizar frontend a angular 21
+- d558c80 chore: limpiar advertencias del frontend
+- 4e3ed59 feat: agendar servicios aceptados
+
+Estos cambios quedaron publicados en la rama principal y corresponden al estado actualmente validado en local.
+
+### 9.2 Resultado actual de auditorías locales
+
+- Front-end: npm audit con 0 vulnerabilidades
+- Back-end: npm audit con 0 vulnerabilidades
+
+### 9.3 Validaciones adicionales realizadas
+
+- Build de producción del frontend completado correctamente tras la migración a Angular 21.
+- Frontend levantado en modo desarrollo y compilando correctamente en runtime.
+- Backend validado con login de cliente y proveedor.
+- Endpoints clave validados correctamente:
+  - notificaciones
+  - pedidos
+  - solicitudes de servicio
+- Flujo operativo de servicios validado correctamente:
+  - accepted
+  - pending_schedule
+  - scheduled
+  - in_progress
+  - closed/completed
+
+### 9.4 Nota sobre la alerta remota de GitHub
+
+Durante el push a GitHub siguió apareciendo un aviso remoto indicando 1 vulnerabilidad moderada en la rama por defecto.
+
+Con las herramientas disponibles en este entorno no fue posible inspeccionar el contenido detallado de la alerta Dependabot del repositorio, porque la URL específica de seguridad no devolvió contenido accesible desde la automatización.
+
+Por lo tanto, el estado verificable y reproducible a nivel local y ya publicado es el siguiente:
+
+- la rama main contiene los commits 73629be y d558c80
+- la rama main ya incluye además el commit 4e3ed59 para agenda y seguimiento de servicios aceptados
+- el frontend auditó en 0 vulnerabilidades
+- el backend auditó en 0 vulnerabilidades
+- la aplicación compiló y respondió correctamente en validación funcional básica
+
+Si GitHub sigue mostrando la alerta, lo más probable es una de estas dos posibilidades:
+
+- el análisis remoto todavía no se ha recalculado sobre el estado más reciente de main
+- la alerta remota quedó asociada a una resolución pendiente en Dependabot aunque el árbol actual ya no la reproduzca localmente
 
 Ese respaldo no porque el proyecto esté inestable, sino porque ya alcanzó un volumen de avance que merece un punto de restauración claro.
