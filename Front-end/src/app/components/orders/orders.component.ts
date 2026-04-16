@@ -110,7 +110,7 @@ import { Order, User } from '../../models/models';
             </div>
             <div class="detail-section">
               <h3>Productos</h3>
-              <div class="detail-items" *ngIf="order.items?.length; else noItemsTemplate">
+              <div class="detail-items" *ngIf="order.items.length; else noItemsTemplate">
                 <article class="detail-item" *ngFor="let item of order.items">
                   <div>
                     <strong>{{ item.product?.name || ('Producto ' + item.productId.slice(0, 8)) }}</strong>

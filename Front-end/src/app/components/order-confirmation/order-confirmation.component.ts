@@ -39,7 +39,7 @@ import { OrderService } from '../../services/index';
 
           <article class="detail-card card">
             <h2>Productos</h2>
-            <div class="items-list" *ngIf="order.items?.length; else noItems">
+            <div class="items-list" *ngIf="order.items.length; else noItems">
               <div class="item-row" *ngFor="let item of order.items">
                 <div>
                   <strong>{{ item.product?.name || ('Producto ' + item.productId.slice(0, 8)) }}</strong>
