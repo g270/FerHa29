@@ -99,6 +99,12 @@
   font-weight: 600;
 }
 
+.schedule-conflict {
+  margin-top: 0.8rem;
+  color: #b91c1c;
+  font-weight: 700;
+}
+
 .seller-response-form {
   display: grid;
   gap: 0.85rem;

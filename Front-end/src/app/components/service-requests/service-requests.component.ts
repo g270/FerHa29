@@ -57,11 +57,16 @@ import { ServiceFulfillmentStatus, ServiceRequest, ServiceRequestStatus, User } 
             <div class="schedule-box" *ngIf="hasScheduleInfo(request)">
               <p *ngIf="request.fulfillmentStatus"><strong>Seguimiento:</strong> {{ getFulfillmentStatusLabel(request.fulfillmentStatus) }}</p>
               <p *ngIf="request.appointmentAt"><strong>Cita:</strong> {{ request.appointmentAt | date:'medium' }}</p>
+              <p *ngIf="request.appointmentDurationMinutes"><strong>Duración:</strong> {{ request.appointmentDurationMinutes }} min</p>
               <p *ngIf="request.serviceMode"><strong>Modalidad:</strong> {{ getServiceModeLabel(request.serviceMode) }}</p>
               <p *ngIf="request.serviceLocation"><strong>Lugar:</strong> {{ request.serviceLocation }}</p>
               <p *ngIf="request.completionNotes"><strong>Observaciones finales:</strong> {{ request.completionNotes }}</p>
               <p *ngIf="request.completionEvidence"><strong>Evidencia o referencia:</strong> {{ request.completionEvidence }}</p>
             </div>
+
+            <p class="schedule-conflict" *ngIf="isSeller && getScheduleConflictMessage(request) as conflictMessage">
+              {{ conflictMessage }}
+            </p>
 
             <p class="schedule-hint" *ngIf="request.status === 'accepted' && request.fulfillmentStatus === 'pending_schedule'">
               {{ isSeller ? 'Esta solicitud ya fue aceptada. Define fecha, modalidad y lugar para programar la cita.' : 'Tu cotización fue aceptada. El proveedor debe programar la cita.' }}
@@ -111,6 +116,20 @@ import { ServiceFulfillmentStatus, ServiceRequest, ServiceRequestStatus, User } 
                     [ngModel]="responseDrafts[request.id].appointmentAt"
                     (ngModelChange)="responseDrafts[request.id].appointmentAt = $event || ''"
                     [ngModelOptions]="{ standalone: true }"
+                  />
+                </label>
+
+                <label>
+                  <span>Duración estimada</span>
+                  <input
+                    type="number"
+                    min="15"
+                    max="480"
+                    step="15"
+                    [ngModel]="responseDrafts[request.id].appointmentDurationMinutes"
+                    (ngModelChange)="responseDrafts[request.id].appointmentDurationMinutes = toNullableNumber($event)"
+                    [ngModelOptions]="{ standalone: true }"
+                    placeholder="60"
                   />
                 </label>
 
@@ -204,6 +223,7 @@ export class ServiceRequestsComponent implements OnInit {
     providerResponse: string;
     quotedPrice: number | null;
     appointmentAt: string;
+    appointmentDurationMinutes: number | null;
     serviceMode: string;
     serviceLocation: string;
     fulfillmentStatus: ServiceFulfillmentStatus;
@@ -254,10 +274,18 @@ export class ServiceRequestsComponent implements OnInit {
       return;
     }
 
+    const conflictMessage = this.getScheduleConflictMessage(request);
+    if (conflictMessage) {
+      this.errorMessage = conflictMessage;
+      this.message = '';
+      return;
+    }
+
     const previousStatus = request.status;
     const previousResponse = request.providerResponse;
     const previousQuotedPrice = request.quotedPrice;
     const previousAppointmentAt = request.appointmentAt;
+    const previousAppointmentDurationMinutes = request.appointmentDurationMinutes;
     const previousServiceMode = request.serviceMode;
     const previousServiceLocation = request.serviceLocation;
     const previousFulfillmentStatus = request.fulfillmentStatus;
@@ -268,6 +296,7 @@ export class ServiceRequestsComponent implements OnInit {
     request.providerResponse = draft.providerResponse.trim() || undefined;
     request.quotedPrice = draft.quotedPrice ?? undefined;
     request.appointmentAt = draft.appointmentAt || undefined;
+    request.appointmentDurationMinutes = draft.appointmentDurationMinutes ?? undefined;
     request.serviceMode = draft.serviceMode || undefined;
     request.serviceLocation = draft.serviceLocation.trim() || undefined;
     request.fulfillmentStatus = draft.fulfillmentStatus || undefined;
@@ -282,6 +311,7 @@ export class ServiceRequestsComponent implements OnInit {
       providerResponse: draft.providerResponse,
       quotedPrice: draft.quotedPrice,
       appointmentAt: draft.appointmentAt || null,
+      appointmentDurationMinutes: draft.appointmentDurationMinutes,
       serviceMode: draft.serviceMode || null,
       serviceLocation: draft.serviceLocation.trim() || null,
       fulfillmentStatus: draft.fulfillmentStatus || null,
@@ -293,6 +323,7 @@ export class ServiceRequestsComponent implements OnInit {
         request.providerResponse = updated.providerResponse;
         request.quotedPrice = updated.quotedPrice;
         request.appointmentAt = updated.appointmentAt;
+        request.appointmentDurationMinutes = updated.appointmentDurationMinutes;
         request.serviceMode = updated.serviceMode;
         request.serviceLocation = updated.serviceLocation;
         request.fulfillmentStatus = updated.fulfillmentStatus;
@@ -303,6 +334,7 @@ export class ServiceRequestsComponent implements OnInit {
           providerResponse: updated.providerResponse || '',
           quotedPrice: updated.quotedPrice ?? null,
           appointmentAt: this.toDateTimeLocalValue(updated.appointmentAt),
+          appointmentDurationMinutes: updated.appointmentDurationMinutes ?? 60,
           serviceMode: updated.serviceMode || '',
           serviceLocation: updated.serviceLocation || '',
           fulfillmentStatus: updated.fulfillmentStatus || 'pending_schedule',
@@ -317,6 +349,7 @@ export class ServiceRequestsComponent implements OnInit {
         request.providerResponse = previousResponse;
         request.quotedPrice = previousQuotedPrice;
         request.appointmentAt = previousAppointmentAt;
+        request.appointmentDurationMinutes = previousAppointmentDurationMinutes;
         request.serviceMode = previousServiceMode;
         request.serviceLocation = previousServiceLocation;
         request.fulfillmentStatus = previousFulfillmentStatus;
@@ -379,7 +412,54 @@ export class ServiceRequestsComponent implements OnInit {
   }
 
   hasScheduleInfo(request: ServiceRequest): boolean {
-    return Boolean(request.appointmentAt || request.serviceMode || request.serviceLocation || request.fulfillmentStatus || request.completionNotes || request.completionEvidence);
+    return Boolean(request.appointmentAt || request.appointmentDurationMinutes || request.serviceMode || request.serviceLocation || request.fulfillmentStatus || request.completionNotes || request.completionEvidence);
+  }
+
+  getScheduleConflictMessage(request: ServiceRequest): string {
+    if (!this.isSeller) {
+      return '';
+    }
+
+    const draft = this.responseDrafts[request.id];
+    if (!draft?.appointmentAt || !['scheduled', 'in_progress'].includes(draft.fulfillmentStatus)) {
+      return '';
+    }
+
+    const appointmentStart = new Date(draft.appointmentAt);
+    if (Number.isNaN(appointmentStart.getTime())) {
+      return '';
+    }
+
+    const durationMinutes = draft.appointmentDurationMinutes ?? request.appointmentDurationMinutes ?? 60;
+    if (!Number.isInteger(durationMinutes) || durationMinutes < 15) {
+      return '';
+    }
+
+    const appointmentEnd = new Date(appointmentStart.getTime() + durationMinutes * 60000);
+    const overlappingRequest = this.requests.find((candidate) => {
+      if (candidate.id === request.id || !candidate.appointmentAt) {
+        return false;
+      }
+
+      if (!candidate.fulfillmentStatus || !['scheduled', 'in_progress'].includes(candidate.fulfillmentStatus)) {
+        return false;
+      }
+
+      const candidateStart = new Date(candidate.appointmentAt);
+      if (Number.isNaN(candidateStart.getTime())) {
+        return false;
+      }
+
+      const candidateDurationMinutes = candidate.appointmentDurationMinutes ?? 60;
+      const candidateEnd = new Date(candidateStart.getTime() + candidateDurationMinutes * 60000);
+      return appointmentStart < candidateEnd && candidateStart < appointmentEnd;
+    });
+
+    if (!overlappingRequest) {
+      return '';
+    }
+
+    return `Cruza con ${overlappingRequest.product?.name || 'otro servicio'} a las ${new Date(overlappingRequest.appointmentAt || '').toLocaleString('es-ES')}.`;
   }
 
   getServiceModeLabel(mode: string): string {
@@ -450,6 +530,7 @@ export class ServiceRequestsComponent implements OnInit {
         providerResponse: request.providerResponse || '',
         quotedPrice: request.quotedPrice ?? null,
         appointmentAt: this.toDateTimeLocalValue(request.appointmentAt),
+        appointmentDurationMinutes: request.appointmentDurationMinutes ?? 60,
         serviceMode: request.serviceMode || '',
         serviceLocation: request.serviceLocation || '',
         fulfillmentStatus: request.fulfillmentStatus || 'pending_schedule',
@@ -462,6 +543,7 @@ export class ServiceRequestsComponent implements OnInit {
       providerResponse: string;
       quotedPrice: number | null;
       appointmentAt: string;
+      appointmentDurationMinutes: number | null;
       serviceMode: string;
       serviceLocation: string;
       fulfillmentStatus: ServiceFulfillmentStatus;

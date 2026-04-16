@@ -173,6 +173,13 @@ async function ensureServiceRequestColumns() {
       }
     },
     {
+      name: 'appointmentDurationMinutes',
+      definition: {
+        type: Sequelize.DataTypes.INTEGER,
+        allowNull: true
+      }
+    },
+    {
       name: 'serviceMode',
       definition: {
         type: Sequelize.DataTypes.STRING,

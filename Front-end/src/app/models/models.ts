@@ -94,6 +94,7 @@ export interface ServiceRequest {
   providerResponse?: string;
   quotedPrice?: number;
   appointmentAt?: string;
+  appointmentDurationMinutes?: number;
   serviceMode?: 'domicilio' | 'negocio' | 'virtual' | string;
   serviceLocation?: string;
   fulfillmentStatus?: ServiceFulfillmentStatus;
@@ -118,6 +119,7 @@ export interface UpdateServiceRequestPayload {
   providerResponse?: string;
   quotedPrice?: number | null;
   appointmentAt?: string | null;
+  appointmentDurationMinutes?: number | null;
   serviceMode?: string | null;
   serviceLocation?: string | null;
   fulfillmentStatus?: ServiceFulfillmentStatus | null;

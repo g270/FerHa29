@@ -38,6 +38,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true
     },
+    appointmentDurationMinutes: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
     serviceMode: {
       type: DataTypes.STRING,
       allowNull: true

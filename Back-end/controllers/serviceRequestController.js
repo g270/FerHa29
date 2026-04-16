@@ -6,6 +6,7 @@ const validStatuses = ['pending', 'contacted', 'quoted', 'accepted', 'rejected',
 const validFulfillmentStatuses = ['pending_schedule', 'scheduled', 'in_progress', 'completed'];
 const validServiceModes = ['domicilio', 'negocio', 'virtual'];
 const serviceRequestLink = '/service-requests';
+const defaultAppointmentDurationMinutes = 60;
 
 const buildInclude = () => ([
   {
@@ -29,6 +30,58 @@ const getUserLabel = (user) => {
 };
 
 const getServiceLabel = (serviceRequest) => serviceRequest.product?.name || 'tu servicio';
+
+const getAppointmentDurationMinutes = (serviceRequest, fallbackDuration) => {
+  const value = fallbackDuration ?? serviceRequest?.appointmentDurationMinutes;
+  return Number.isInteger(value) && value > 0 ? value : defaultAppointmentDurationMinutes;
+};
+
+const getAppointmentEndTime = (appointmentAt, durationMinutes) => {
+  if (!(appointmentAt instanceof Date) || Number.isNaN(appointmentAt.getTime())) {
+    return null;
+  }
+
+  return new Date(appointmentAt.getTime() + durationMinutes * 60000);
+};
+
+const buildConflictMessage = (overlappingRequest) => {
+  const serviceLabel = getServiceLabel(overlappingRequest);
+  const appointmentDate = overlappingRequest.appointmentAt
+    ? new Date(overlappingRequest.appointmentAt).toLocaleString('es-ES')
+    : 'la franja ya ocupada';
+
+  return `Ya tienes una cita agendada para ${serviceLabel} en ${appointmentDate}. Elige otro horario.`;
+};
+
+const findOverlappingAppointment = async ({ sellerId, serviceRequestId, appointmentAt, durationMinutes }) => {
+  const appointmentEndAt = getAppointmentEndTime(appointmentAt, durationMinutes);
+  if (!appointmentEndAt) {
+    return null;
+  }
+
+  const candidateRequests = await ServiceRequest.findAll({
+    where: {
+      sellerId,
+      appointmentAt: { [require('sequelize').Op.ne]: null },
+      fulfillmentStatus: ['scheduled', 'in_progress']
+    },
+    include: buildInclude()
+  });
+
+  return candidateRequests.find((candidate) => {
+    if (candidate.id === serviceRequestId || !candidate.appointmentAt) {
+      return false;
+    }
+
+    const candidateStart = new Date(candidate.appointmentAt);
+    const candidateEnd = getAppointmentEndTime(candidateStart, getAppointmentDurationMinutes(candidate));
+    if (!candidateEnd) {
+      return false;
+    }
+
+    return appointmentAt < candidateEnd && candidateStart < appointmentEndAt;
+  }) || null;
+};
 
 const getFulfillmentStatusLabel = (status) => {
   switch (status) {
@@ -211,7 +264,7 @@ exports.createServiceRequest = async (req, res, next) => {
 
 exports.updateServiceRequestStatus = async (req, res, next) => {
   try {
-    const { status, providerResponse, quotedPrice, appointmentAt, serviceMode, serviceLocation, fulfillmentStatus, completionNotes, completionEvidence } = req.body;
+    const { status, providerResponse, quotedPrice, appointmentAt, appointmentDurationMinutes, serviceMode, serviceLocation, fulfillmentStatus, completionNotes, completionEvidence } = req.body;
 
     if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({ message: 'El estado de la solicitud no es válido' });
@@ -233,6 +286,17 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
 
     if (normalizedAppointmentAt instanceof Date && Number.isNaN(normalizedAppointmentAt.getTime())) {
       return res.status(400).json({ message: 'La fecha y hora de la cita no es válida' });
+    }
+
+    const normalizedAppointmentDurationMinutes = appointmentDurationMinutes === undefined || appointmentDurationMinutes === null || appointmentDurationMinutes === ''
+      ? undefined
+      : Number(appointmentDurationMinutes);
+
+    if (
+      normalizedAppointmentDurationMinutes !== undefined
+      && (!Number.isInteger(normalizedAppointmentDurationMinutes) || normalizedAppointmentDurationMinutes < 15 || normalizedAppointmentDurationMinutes > 480)
+    ) {
+      return res.status(400).json({ message: 'La duración de la cita debe estar entre 15 y 480 minutos' });
     }
 
     const normalizedServiceMode = serviceMode === undefined ? undefined : serviceMode?.trim() || null;
@@ -272,6 +336,7 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
       }
 
       const hasSchedulingChanges = appointmentAt !== undefined
+        || appointmentDurationMinutes !== undefined
         || serviceMode !== undefined
         || serviceLocation !== undefined
         || fulfillmentStatus !== undefined
@@ -285,6 +350,7 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
 
       const effectiveFulfillmentStatus = normalizedFulfillmentStatus || serviceRequest.fulfillmentStatus || (hasSchedulingChanges ? 'scheduled' : null);
       const effectiveAppointmentAt = normalizedAppointmentAt === undefined ? serviceRequest.appointmentAt : normalizedAppointmentAt;
+      const effectiveAppointmentDurationMinutes = getAppointmentDurationMinutes(serviceRequest, normalizedAppointmentDurationMinutes);
       const effectiveServiceMode = normalizedServiceMode === undefined ? serviceRequest.serviceMode : normalizedServiceMode;
       const effectiveServiceLocation = normalizedServiceLocation === undefined ? serviceRequest.serviceLocation : normalizedServiceLocation;
 
@@ -295,6 +361,17 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
 
         if (!effectiveServiceMode) {
           return res.status(400).json({ message: 'Debes indicar la modalidad del servicio para agendar la cita' });
+        }
+
+        const overlappingRequest = await findOverlappingAppointment({
+          sellerId: serviceRequest.sellerId,
+          serviceRequestId: serviceRequest.id,
+          appointmentAt: effectiveAppointmentAt,
+          durationMinutes: effectiveAppointmentDurationMinutes
+        });
+
+        if (overlappingRequest) {
+          return res.status(409).json({ message: buildConflictMessage(overlappingRequest) });
         }
       }
 
@@ -323,7 +400,7 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
         return res.status(400).json({ message: 'Solo puedes aceptar o rechazar una solicitud que ya fue cotizada' });
       }
 
-      if (appointmentAt !== undefined || serviceMode !== undefined || serviceLocation !== undefined || fulfillmentStatus !== undefined || completionNotes !== undefined || completionEvidence !== undefined) {
+      if (appointmentAt !== undefined || appointmentDurationMinutes !== undefined || serviceMode !== undefined || serviceLocation !== undefined || fulfillmentStatus !== undefined || completionNotes !== undefined || completionEvidence !== undefined) {
         return res.status(403).json({ message: 'Solo el proveedor puede agendar y dar seguimiento operativo al servicio' });
       }
     } else if (req.userType !== 'admin') {
@@ -334,6 +411,7 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
     const previousResponse = serviceRequest.providerResponse;
     const previousQuotedPrice = serviceRequest.quotedPrice;
     const previousAppointmentAt = serviceRequest.appointmentAt;
+    const previousAppointmentDurationMinutes = serviceRequest.appointmentDurationMinutes;
     const previousServiceMode = serviceRequest.serviceMode;
     const previousServiceLocation = serviceRequest.serviceLocation;
     const previousFulfillmentStatus = serviceRequest.fulfillmentStatus;
@@ -347,6 +425,12 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
 
       if (normalizedAppointmentAt !== undefined) {
         updatePayload.appointmentAt = normalizedAppointmentAt;
+      }
+
+      if (normalizedAppointmentDurationMinutes !== undefined) {
+        updatePayload.appointmentDurationMinutes = normalizedAppointmentDurationMinutes;
+      } else if (normalizedAppointmentAt !== undefined && !serviceRequest.appointmentDurationMinutes) {
+        updatePayload.appointmentDurationMinutes = defaultAppointmentDurationMinutes;
       }
 
       if (normalizedServiceMode !== undefined) {
@@ -391,6 +475,7 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
       || previousResponse !== serviceRequest.providerResponse
       || Number(previousQuotedPrice || 0) !== Number(serviceRequest.quotedPrice || 0)
       || String(previousAppointmentAt || '') !== String(serviceRequest.appointmentAt || '')
+      || Number(previousAppointmentDurationMinutes || 0) !== Number(serviceRequest.appointmentDurationMinutes || 0)
       || String(previousServiceMode || '') !== String(serviceRequest.serviceMode || '')
       || String(previousServiceLocation || '') !== String(serviceRequest.serviceLocation || '')
       || String(previousFulfillmentStatus || '') !== String(serviceRequest.fulfillmentStatus || '')
