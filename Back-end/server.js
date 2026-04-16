@@ -192,6 +192,20 @@ async function ensureServiceRequestColumns() {
         type: Sequelize.DataTypes.STRING,
         allowNull: true
       }
+    },
+    {
+      name: 'completionNotes',
+      definition: {
+        type: Sequelize.DataTypes.TEXT,
+        allowNull: true
+      }
+    },
+    {
+      name: 'completionEvidence',
+      definition: {
+        type: Sequelize.DataTypes.STRING,
+        allowNull: true
+      }
     }
   ];
 

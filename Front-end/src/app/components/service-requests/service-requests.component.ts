@@ -59,6 +59,8 @@ import { ServiceFulfillmentStatus, ServiceRequest, ServiceRequestStatus, User } 
               <p *ngIf="request.appointmentAt"><strong>Cita:</strong> {{ request.appointmentAt | date:'medium' }}</p>
               <p *ngIf="request.serviceMode"><strong>Modalidad:</strong> {{ getServiceModeLabel(request.serviceMode) }}</p>
               <p *ngIf="request.serviceLocation"><strong>Lugar:</strong> {{ request.serviceLocation }}</p>
+              <p *ngIf="request.completionNotes"><strong>Observaciones finales:</strong> {{ request.completionNotes }}</p>
+              <p *ngIf="request.completionEvidence"><strong>Evidencia o referencia:</strong> {{ request.completionEvidence }}</p>
             </div>
 
             <p class="schedule-hint" *ngIf="request.status === 'accepted' && request.fulfillmentStatus === 'pending_schedule'">
@@ -147,6 +149,28 @@ import { ServiceFulfillmentStatus, ServiceRequest, ServiceRequestStatus, User } 
                     <option *ngFor="let fulfillment of fulfillmentOptions" [value]="fulfillment">{{ getFulfillmentStatusLabel(fulfillment) }}</option>
                   </select>
                 </label>
+
+                <label>
+                  <span>Observaciones finales del servicio</span>
+                  <textarea
+                    rows="4"
+                    [ngModel]="responseDrafts[request.id].completionNotes"
+                    (ngModelChange)="responseDrafts[request.id].completionNotes = $event"
+                    [ngModelOptions]="{ standalone: true }"
+                    placeholder="Ej. Se realizó diagnóstico, ajuste y entrega de recomendaciones al cliente"
+                  ></textarea>
+                </label>
+
+                <label>
+                  <span>Evidencia o referencia</span>
+                  <input
+                    type="text"
+                    [ngModel]="responseDrafts[request.id].completionEvidence"
+                    (ngModelChange)="responseDrafts[request.id].completionEvidence = $event"
+                    [ngModelOptions]="{ standalone: true }"
+                    placeholder="Ej. Acta firmada, enlace a carpeta, comprobante interno"
+                  />
+                </label>
               </div>
 
               <button type="button" class="btn-save" (click)="updateStatus(request)" [disabled]="updatingId === request.id">
@@ -183,6 +207,8 @@ export class ServiceRequestsComponent implements OnInit {
     serviceMode: string;
     serviceLocation: string;
     fulfillmentStatus: ServiceFulfillmentStatus;
+    completionNotes: string;
+    completionEvidence: string;
   }> = {};
 
   readonly statusOptions: ServiceRequestStatus[] = ['pending', 'contacted', 'quoted', 'accepted', 'rejected', 'closed', 'cancelled'];
@@ -235,6 +261,8 @@ export class ServiceRequestsComponent implements OnInit {
     const previousServiceMode = request.serviceMode;
     const previousServiceLocation = request.serviceLocation;
     const previousFulfillmentStatus = request.fulfillmentStatus;
+    const previousCompletionNotes = request.completionNotes;
+    const previousCompletionEvidence = request.completionEvidence;
 
     request.status = draft.status;
     request.providerResponse = draft.providerResponse.trim() || undefined;
@@ -243,6 +271,8 @@ export class ServiceRequestsComponent implements OnInit {
     request.serviceMode = draft.serviceMode || undefined;
     request.serviceLocation = draft.serviceLocation.trim() || undefined;
     request.fulfillmentStatus = draft.fulfillmentStatus || undefined;
+    request.completionNotes = draft.completionNotes.trim() || undefined;
+    request.completionEvidence = draft.completionEvidence.trim() || undefined;
     this.updatingId = request.id;
     this.message = '';
     this.errorMessage = '';
@@ -254,7 +284,9 @@ export class ServiceRequestsComponent implements OnInit {
       appointmentAt: draft.appointmentAt || null,
       serviceMode: draft.serviceMode || null,
       serviceLocation: draft.serviceLocation.trim() || null,
-      fulfillmentStatus: draft.fulfillmentStatus || null
+      fulfillmentStatus: draft.fulfillmentStatus || null,
+      completionNotes: draft.completionNotes.trim() || null,
+      completionEvidence: draft.completionEvidence.trim() || null
     }).subscribe({
       next: (updated) => {
         request.status = updated.status;
@@ -264,6 +296,8 @@ export class ServiceRequestsComponent implements OnInit {
         request.serviceMode = updated.serviceMode;
         request.serviceLocation = updated.serviceLocation;
         request.fulfillmentStatus = updated.fulfillmentStatus;
+        request.completionNotes = updated.completionNotes;
+        request.completionEvidence = updated.completionEvidence;
         this.responseDrafts[request.id] = {
           status: updated.status,
           providerResponse: updated.providerResponse || '',
@@ -271,7 +305,9 @@ export class ServiceRequestsComponent implements OnInit {
           appointmentAt: this.toDateTimeLocalValue(updated.appointmentAt),
           serviceMode: updated.serviceMode || '',
           serviceLocation: updated.serviceLocation || '',
-          fulfillmentStatus: updated.fulfillmentStatus || 'pending_schedule'
+          fulfillmentStatus: updated.fulfillmentStatus || 'pending_schedule',
+          completionNotes: updated.completionNotes || '',
+          completionEvidence: updated.completionEvidence || ''
         };
         this.updatingId = null;
         this.message = `Solicitud #${request.id.slice(0, 8)} actualizada a ${this.getStatusLabel(updated.status)}.`;
@@ -284,6 +320,8 @@ export class ServiceRequestsComponent implements OnInit {
         request.serviceMode = previousServiceMode;
         request.serviceLocation = previousServiceLocation;
         request.fulfillmentStatus = previousFulfillmentStatus;
+        request.completionNotes = previousCompletionNotes;
+        request.completionEvidence = previousCompletionEvidence;
         this.updatingId = null;
         this.errorMessage = err.error?.message || 'No se pudo actualizar la solicitud.';
       }
@@ -341,7 +379,7 @@ export class ServiceRequestsComponent implements OnInit {
   }
 
   hasScheduleInfo(request: ServiceRequest): boolean {
-    return Boolean(request.appointmentAt || request.serviceMode || request.serviceLocation || request.fulfillmentStatus);
+    return Boolean(request.appointmentAt || request.serviceMode || request.serviceLocation || request.fulfillmentStatus || request.completionNotes || request.completionEvidence);
   }
 
   getServiceModeLabel(mode: string): string {
@@ -414,7 +452,9 @@ export class ServiceRequestsComponent implements OnInit {
         appointmentAt: this.toDateTimeLocalValue(request.appointmentAt),
         serviceMode: request.serviceMode || '',
         serviceLocation: request.serviceLocation || '',
-        fulfillmentStatus: request.fulfillmentStatus || 'pending_schedule'
+        fulfillmentStatus: request.fulfillmentStatus || 'pending_schedule',
+        completionNotes: request.completionNotes || '',
+        completionEvidence: request.completionEvidence || ''
       };
       return drafts;
     }, {} as Record<string, {
@@ -425,6 +465,8 @@ export class ServiceRequestsComponent implements OnInit {
       serviceMode: string;
       serviceLocation: string;
       fulfillmentStatus: ServiceFulfillmentStatus;
+      completionNotes: string;
+      completionEvidence: string;
     }>);
   }
 }

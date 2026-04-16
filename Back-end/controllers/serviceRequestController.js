@@ -211,7 +211,7 @@ exports.createServiceRequest = async (req, res, next) => {
 
 exports.updateServiceRequestStatus = async (req, res, next) => {
   try {
-    const { status, providerResponse, quotedPrice, appointmentAt, serviceMode, serviceLocation, fulfillmentStatus } = req.body;
+    const { status, providerResponse, quotedPrice, appointmentAt, serviceMode, serviceLocation, fulfillmentStatus, completionNotes, completionEvidence } = req.body;
 
     if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({ message: 'El estado de la solicitud no es válido' });
@@ -246,6 +246,9 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
       return res.status(400).json({ message: 'El seguimiento operativo del servicio no es válido' });
     }
 
+    const normalizedCompletionNotes = completionNotes === undefined ? undefined : completionNotes?.trim() || null;
+    const normalizedCompletionEvidence = completionEvidence === undefined ? undefined : completionEvidence?.trim() || null;
+
     const serviceRequest = await ServiceRequest.findByPk(req.params.id, {
       include: buildInclude()
     });
@@ -271,7 +274,9 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
       const hasSchedulingChanges = appointmentAt !== undefined
         || serviceMode !== undefined
         || serviceLocation !== undefined
-        || fulfillmentStatus !== undefined;
+        || fulfillmentStatus !== undefined
+        || completionNotes !== undefined
+        || completionEvidence !== undefined;
 
       const effectiveStatus = status || serviceRequest.status;
       if (hasSchedulingChanges && !['accepted', 'closed'].includes(effectiveStatus)) {
@@ -300,6 +305,10 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
       if (effectiveServiceMode && effectiveServiceMode !== 'virtual' && !effectiveServiceLocation) {
         return res.status(400).json({ message: 'Debes indicar la dirección o punto de encuentro del servicio' });
       }
+
+      if (effectiveFulfillmentStatus === 'completed' && !normalizedCompletionNotes && !serviceRequest.completionNotes) {
+        return res.status(400).json({ message: 'Debes registrar observaciones finales para completar el servicio' });
+      }
     } else if (req.userType === 'client') {
       if (serviceRequest.clientUserId !== req.userId) {
         return res.status(403).json({ message: 'Solo puedes actualizar tus propias solicitudes' });
@@ -314,7 +323,7 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
         return res.status(400).json({ message: 'Solo puedes aceptar o rechazar una solicitud que ya fue cotizada' });
       }
 
-      if (appointmentAt !== undefined || serviceMode !== undefined || serviceLocation !== undefined || fulfillmentStatus !== undefined) {
+      if (appointmentAt !== undefined || serviceMode !== undefined || serviceLocation !== undefined || fulfillmentStatus !== undefined || completionNotes !== undefined || completionEvidence !== undefined) {
         return res.status(403).json({ message: 'Solo el proveedor puede agendar y dar seguimiento operativo al servicio' });
       }
     } else if (req.userType !== 'admin') {
@@ -328,6 +337,8 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
     const previousServiceMode = serviceRequest.serviceMode;
     const previousServiceLocation = serviceRequest.serviceLocation;
     const previousFulfillmentStatus = serviceRequest.fulfillmentStatus;
+    const previousCompletionNotes = serviceRequest.completionNotes;
+    const previousCompletionEvidence = serviceRequest.completionEvidence;
     const updatePayload = { status };
 
     if (req.userType === 'seller') {
@@ -355,6 +366,14 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
         updatePayload.fulfillmentStatus = 'scheduled';
       }
 
+      if (normalizedCompletionNotes !== undefined) {
+        updatePayload.completionNotes = normalizedCompletionNotes;
+      }
+
+      if (normalizedCompletionEvidence !== undefined) {
+        updatePayload.completionEvidence = normalizedCompletionEvidence;
+      }
+
       if (updatePayload.fulfillmentStatus === 'completed' || status === 'closed') {
         updatePayload.fulfillmentStatus = 'completed';
         updatePayload.status = 'closed';
@@ -375,6 +394,8 @@ exports.updateServiceRequestStatus = async (req, res, next) => {
       || String(previousServiceMode || '') !== String(serviceRequest.serviceMode || '')
       || String(previousServiceLocation || '') !== String(serviceRequest.serviceLocation || '')
       || String(previousFulfillmentStatus || '') !== String(serviceRequest.fulfillmentStatus || '')
+      || String(previousCompletionNotes || '') !== String(serviceRequest.completionNotes || '')
+      || String(previousCompletionEvidence || '') !== String(serviceRequest.completionEvidence || '')
     );
 
     if (shouldNotifyClient) {

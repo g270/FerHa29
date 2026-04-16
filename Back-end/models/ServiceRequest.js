@@ -50,6 +50,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    completionNotes: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    completionEvidence: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     status: {
       type: DataTypes.STRING,
       allowNull: false,

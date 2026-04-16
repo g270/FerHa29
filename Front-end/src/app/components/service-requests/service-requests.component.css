@@ -136,6 +136,11 @@
   border: 1px dashed #cbd5e1;
 }
 
+.schedule-fields textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
 .btn-save {
   width: fit-content;
   border: 0;

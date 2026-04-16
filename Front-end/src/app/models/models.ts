@@ -97,6 +97,8 @@ export interface ServiceRequest {
   serviceMode?: 'domicilio' | 'negocio' | 'virtual' | string;
   serviceLocation?: string;
   fulfillmentStatus?: ServiceFulfillmentStatus;
+  completionNotes?: string;
+  completionEvidence?: string;
   status: ServiceRequestStatus;
   createdAt?: string;
   updatedAt?: string;
@@ -119,6 +121,8 @@ export interface UpdateServiceRequestPayload {
   serviceMode?: string | null;
   serviceLocation?: string | null;
   fulfillmentStatus?: ServiceFulfillmentStatus | null;
+  completionNotes?: string | null;
+  completionEvidence?: string | null;
 }
 
 export interface AppNotification {
