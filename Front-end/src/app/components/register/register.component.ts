@@ -4,6 +4,7 @@ import { AuthService } from '../../services/index';
 
 @Component({
   selector: 'app-register',
+  standalone: false,
   template: `
     <section class="auth-page">
       <form class="auth-card" (ngSubmit)="submit()">

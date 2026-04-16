@@ -4,6 +4,7 @@ import { Order, User } from '../../models/models';
 
 @Component({
   selector: 'app-orders',
+  standalone: false,
   styleUrls: ['./orders.component.css'],
   template: `
     <section class="orders-page">

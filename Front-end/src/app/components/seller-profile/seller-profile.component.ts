@@ -5,6 +5,7 @@ import { SellerService } from '../../services/index';
 
 @Component({
   selector: 'app-seller-profile',
+  standalone: false,
   styleUrls: ['./seller-profile.component.css'],
   template: `
     <section class="seller-public-page">

@@ -5,6 +5,7 @@ import { ProductService, ServiceRequestService } from '../../services/index';
 
 @Component({
   selector: 'app-service-request-form',
+  standalone: false,
   styleUrls: ['./service-request-form.component.css'],
   template: `
     <section class="service-request-page">

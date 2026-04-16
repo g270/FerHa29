@@ -5,6 +5,7 @@ import { OrderService } from '../../services/index';
 
 @Component({
   selector: 'app-order-confirmation',
+  standalone: false,
   template: `
     <section class="confirmation-page">
       <div class="hero card" *ngIf="!loading && order; else loadingState">

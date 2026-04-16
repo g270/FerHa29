@@ -5,6 +5,7 @@ import { Product } from '../../models/models';
 
 @Component({
   selector: 'app-catalog',
+  standalone: false,
   styleUrls: ['./catalog.component.css'],
   template: `
     <section class="landing-hero">

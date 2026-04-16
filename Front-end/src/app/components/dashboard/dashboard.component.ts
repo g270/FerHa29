@@ -5,6 +5,7 @@ import { AuthService, ProductService, SellerService } from '../../services/index
 
 @Component({
   selector: 'app-dashboard',
+  standalone: false,
   styleUrls: ['./dashboard.component.css'],
   template: `
     <section class="business-profile">

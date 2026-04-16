@@ -5,6 +5,7 @@ import { NotificationService } from '../../services/index';
 
 @Component({
   selector: 'app-notifications',
+  standalone: false,
   styleUrls: ['./notifications.component.css'],
   template: `
     <section class="notifications-page">

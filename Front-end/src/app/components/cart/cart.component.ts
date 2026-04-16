@@ -7,6 +7,7 @@ import { AuthService, CartService, OrderService, ProductService } from '../../se
 
 @Component({
   selector: 'app-cart',
+  standalone: false,
   template: `
     <div class="cart-container">
       <div class="cart-header">

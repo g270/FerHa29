@@ -7,6 +7,7 @@ type ProductFormStep = 1 | 2 | 3 | 4;
 
 @Component({
   selector: 'app-seller-product-form',
+  standalone: false,
   template: `
     <section class="seller-form-page">
       <div class="page-header">

@@ -5,6 +5,7 @@ import { Product } from '../../models/models';
 
 @Component({
   selector: 'app-product-detail',
+  standalone: false,
   styleUrls: ['./product-detail.component.css'],
   template: `
     <div class="product-detail-page">

@@ -4,6 +4,7 @@ import { ServiceRequest, ServiceRequestStatus, User } from '../../models/models'
 
 @Component({
   selector: 'app-service-requests',
+  standalone: false,
   styleUrls: ['./service-requests.component.css'],
   template: `
     <section class="requests-page">
