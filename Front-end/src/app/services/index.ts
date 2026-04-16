@@ -9,7 +9,13 @@ const API_URL = 'http://localhost:3001/api';
 export class AuthService {
   private readonly tokenKey = 'mercaclick_token';
   private readonly userKey = 'mercaclick_user';
+  private readonly profileCacheTtlMs = 15000;
   private readonly authStateSubject = new BehaviorSubject<boolean>(this.hasToken());
+
+  private profileLoaded = false;
+  private lastProfileFetchAt = 0;
+  private cachedProfile: User | null = null;
+  private pendingProfileRequest?: Observable<User>;
 
   authState$ = this.authStateSubject.asObservable();
 
@@ -35,15 +41,43 @@ export class AuthService {
     );
   }
 
-  getProfile(): Observable<User> {
-    return this.http.get<User>(`${API_URL}/users/profile`).pipe(
-      tap((user) => localStorage.setItem(this.userKey, JSON.stringify(user)))
+  getProfile(forceRefresh = false): Observable<User> {
+    const cacheIsFresh = this.profileLoaded && (Date.now() - this.lastProfileFetchAt) < this.profileCacheTtlMs;
+
+    if (!forceRefresh && cacheIsFresh && this.cachedProfile) {
+      return of({ ...this.cachedProfile, sellerProfile: this.cachedProfile.sellerProfile ? { ...this.cachedProfile.sellerProfile } : null });
+    }
+
+    if (!forceRefresh && this.pendingProfileRequest) {
+      return this.pendingProfileRequest.pipe(
+        map((user) => ({
+          ...user,
+          sellerProfile: user.sellerProfile ? { ...user.sellerProfile } : null
+        }))
+      );
+    }
+
+    const request = this.http.get<User>(`${API_URL}/users/profile`).pipe(
+      tap((user) => this.setCachedProfile(user)),
+      finalize(() => {
+        if (this.pendingProfileRequest === request) {
+          this.pendingProfileRequest = undefined;
+        }
+      }),
+      shareReplay(1)
     );
+
+    this.pendingProfileRequest = request;
+    return request;
   }
 
   logout(): void {
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem(this.userKey);
+    this.cachedProfile = null;
+    this.profileLoaded = false;
+    this.lastProfileFetchAt = 0;
+    this.pendingProfileRequest = undefined;
     this.authStateSubject.next(false);
   }
 
@@ -72,7 +106,18 @@ export class AuthService {
   private setSession(token: string, user: User): void {
     localStorage.setItem(this.tokenKey, token);
     localStorage.setItem(this.userKey, JSON.stringify(user));
+    this.cachedProfile = user;
+    this.profileLoaded = true;
+    this.lastProfileFetchAt = Date.now();
+    this.pendingProfileRequest = undefined;
     this.authStateSubject.next(true);
+  }
+
+  private setCachedProfile(user: User): void {
+    localStorage.setItem(this.userKey, JSON.stringify(user));
+    this.cachedProfile = user;
+    this.profileLoaded = true;
+    this.lastProfileFetchAt = Date.now();
   }
 
   private hasToken(): boolean {

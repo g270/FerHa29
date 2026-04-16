@@ -174,6 +174,13 @@ import { AuthService, ProductService, SellerService } from '../../services/index
             </form>
           </div>
 
+          <p class="state success" *ngIf="activeTab === 'negocio' && businessMessage">{{ businessMessage }}</p>
+          <p class="state error" *ngIf="activeTab === 'negocio' && businessError">{{ businessError }}</p>
+
+          <div class="empty-panel card" *ngIf="isSeller && !loading && !businessForm">
+            <p>No se encontró el perfil comercial del negocio para esta cuenta.</p>
+          </div>
+
           <div class="empty-panel card" *ngIf="!isSeller">
             <p>Este espacio de negocio está disponible para cuentas de proveedor.</p>
           </div>
@@ -222,7 +229,15 @@ export class DashboardComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.authService.getProfile().subscribe({
+    const cachedUser = this.authService.getCurrentUser();
+    if (cachedUser) {
+      this.user = cachedUser;
+      this.syncBusinessForm();
+      this.loadSellerProducts();
+      this.loading = false;
+    }
+
+    this.authService.getProfile(Boolean(cachedUser)).subscribe({
       next: (profile) => {
         this.user = profile;
         this.syncBusinessForm();
@@ -231,7 +246,9 @@ export class DashboardComponent implements OnInit {
       },
       error: (err: unknown) => {
         console.error('Error cargando perfil', err);
-        this.error = 'No se pudo cargar el perfil';
+        if (!cachedUser) {
+          this.error = 'No se pudo cargar el perfil';
+        }
         this.loading = false;
       }
     });
@@ -336,7 +353,7 @@ export class DashboardComponent implements OnInit {
         this.syncBusinessForm();
         this.businessMessage = 'El perfil comercial del negocio se actualizó correctamente.';
         this.savingBusinessProfile = false;
-        this.authService.getProfile().subscribe({
+        this.authService.getProfile(true).subscribe({
           next: (profile) => {
             this.user = profile;
             this.syncBusinessForm();
