@@ -133,7 +133,7 @@ type ProductFormStep = 1 | 2 | 3 | 4;
         </section>
 
         <div class="actions-bar">
-          <button type="button" class="btn-ghost" (click)="previousStep()" [disabled]="currentStep === 1">Anterior</button>
+          <button type="button" class="btn-ghost" (click)="previousStep()">{{ currentStep === 1 ? 'Regresar' : 'Anterior' }}</button>
           <button type="button" class="btn-secondary" *ngIf="currentStep < 4" (click)="nextStep()">Siguiente</button>
         </div>
 
@@ -219,7 +219,10 @@ export class SellerProductFormComponent implements OnInit {
   previousStep(): void {
     if (this.currentStep > 1) {
       this.currentStep = (this.currentStep - 1) as ProductFormStep;
+      return;
     }
+
+    this.goBack();
   }
 
   isFormReady(): boolean {
@@ -289,6 +292,15 @@ export class SellerProductFormComponent implements OnInit {
         this.errorMessage = err.error?.message || (this.isEditMode ? 'No se pudo actualizar la publicacion.' : 'No se pudo crear la publicacion.');
       }
     });
+  }
+
+  private goBack(): void {
+    if (this.isEditMode && this.editingProductId) {
+      this.router.navigate(['/product', this.editingProductId]);
+      return;
+    }
+
+    this.router.navigate(['/dashboard']);
   }
 
   private loadProduct(productId: string): void {
