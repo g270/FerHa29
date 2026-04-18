@@ -34,6 +34,41 @@ export interface Seller {
   rating: number;
   isVerified: boolean;
   products?: Product[];
+  user?: User;
+}
+
+export interface SellerReview {
+  id: string;
+  sellerId: string;
+  userId: string;
+  rating: number;
+  comment: string;
+  isVerifiedTransaction: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  reviewer?: Pick<User, 'id' | 'firstName' | 'lastName'>;
+}
+
+export interface SellerReviewSummary {
+  averageRating: number;
+  totalReviews: number;
+  verifiedReviews: number;
+}
+
+export interface SellerReviewListResponse {
+  items: SellerReview[];
+  summary: SellerReviewSummary;
+}
+
+export interface SellerReviewSaveResponse {
+  message: string;
+  review: SellerReview;
+  summary: SellerReviewSummary;
+}
+
+export interface CreateSellerReviewPayload {
+  rating: number;
+  comment: string;
 }
 
 export type ServiceRequestStatus = 'pending' | 'contacted' | 'quoted' | 'accepted' | 'rejected' | 'closed' | 'cancelled';

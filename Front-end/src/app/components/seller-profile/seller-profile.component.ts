@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { Product, Seller } from '../../models/models';
-import { SellerService } from '../../services/index';
+import { Product, Seller, SellerReview, SellerReviewSummary, User } from '../../models/models';
+import { AuthService, SellerService } from '../../services/index';
 
 @Component({
   selector: 'app-seller-profile',
@@ -93,21 +93,104 @@ import { SellerService } from '../../services/index';
             <p class="state" *ngIf="productItems.length === 0 && serviceItems.length === 0">Este proveedor aún no tiene publicaciones activas visibles.</p>
           </div>
         </section>
+
+        <section class="card reviews-panel">
+          <div class="reviews-header">
+            <div>
+              <p class="eyebrow">Confianza y reputación</p>
+              <h2>Reseñas del negocio</h2>
+            </div>
+            <div class="reviews-summary">
+              <article>
+                <span>Promedio</span>
+                <strong>⭐ {{ reviewSummary.averageRating || seller.rating || 0 }}</strong>
+              </article>
+              <article>
+                <span>Total</span>
+                <strong>{{ reviewSummary.totalReviews }}</strong>
+              </article>
+              <article>
+                <span>Verificadas</span>
+                <strong>{{ reviewSummary.verifiedReviews }}</strong>
+              </article>
+            </div>
+          </div>
+
+          <form class="review-form" *ngIf="canReview" (ngSubmit)="submitReview()">
+            <div class="review-form-header">
+              <h3>Cuéntale a otros cómo te fue</h3>
+              <label>
+                <span>Calificación</span>
+                <select [(ngModel)]="reviewForm.rating" name="reviewRating">
+                  <option *ngFor="let option of ratingOptions" [value]="option">{{ option }} estrella{{ option > 1 ? 's' : '' }}</option>
+                </select>
+              </label>
+            </div>
+            <textarea [(ngModel)]="reviewForm.comment" name="reviewComment" rows="4" placeholder="Describe la atención, puntualidad o calidad del servicio." required></textarea>
+            <div class="review-form-actions">
+              <button type="submit" class="btn-primary" [disabled]="reviewSaving || !isReviewFormValid()">{{ reviewSaving ? 'Guardando...' : 'Guardar reseña' }}</button>
+              <span class="state success inline-state" *ngIf="reviewSuccess">{{ reviewSuccess }}</span>
+              <span class="state error inline-state" *ngIf="reviewSubmitError">{{ reviewSubmitError }}</span>
+            </div>
+          </form>
+
+          <div class="card empty-review-card" *ngIf="!currentUser">
+            <p>Inicia sesión para dejar una reseña sobre este negocio.</p>
+          </div>
+
+          <div class="state" *ngIf="reviewsLoading">Cargando reseñas...</div>
+          <div class="state error" *ngIf="reviewsError">{{ reviewsError }}</div>
+
+          <div class="review-list" *ngIf="!reviewsLoading && reviews.length > 0">
+            <article class="review-card" *ngFor="let review of reviews">
+              <div class="review-topline">
+                <div>
+                  <strong>{{ getReviewerName(review) }}</strong>
+                  <span>{{ review.createdAt | date:'mediumDate' }}</span>
+                </div>
+                <div class="review-badges">
+                  <span class="badge">⭐ {{ review.rating }}/5</span>
+                  <span class="meta-chip success-chip" *ngIf="review.isVerifiedTransaction">Compra o servicio verificado</span>
+                </div>
+              </div>
+              <p>{{ review.comment }}</p>
+            </article>
+          </div>
+
+          <div class="card empty-review-card" *ngIf="!reviewsLoading && reviews.length === 0">
+            <p>Este negocio aún no tiene reseñas publicadas.</p>
+          </div>
+        </section>
       </ng-container>
     </section>
   `
 })
 export class SellerProfileComponent implements OnInit {
   seller: Seller | null = null;
+  currentUser: User | null = null;
   loading = true;
   error = '';
+  reviews: SellerReview[] = [];
+  reviewSummary: SellerReviewSummary = { averageRating: 0, totalReviews: 0, verifiedReviews: 0 };
+  reviewsLoading = false;
+  reviewsError = '';
+  reviewSaving = false;
+  reviewSuccess = '';
+  reviewSubmitError = '';
+  ratingOptions = [5, 4, 3, 2, 1];
+  reviewForm = {
+    rating: 5,
+    comment: ''
+  };
 
   constructor(
     private route: ActivatedRoute,
-    private sellerService: SellerService
+    private sellerService: SellerService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
+    this.currentUser = this.authService.getCurrentUser();
     const sellerId = this.route.snapshot.paramMap.get('id');
     if (!sellerId) {
       this.error = 'Proveedor no encontrado.';
@@ -119,6 +202,7 @@ export class SellerProfileComponent implements OnInit {
       next: (seller) => {
         this.seller = seller;
         this.loading = false;
+        this.loadReviews(seller.id);
       },
       error: () => {
         this.error = 'No se pudo cargar el negocio del proveedor.';
@@ -137,5 +221,66 @@ export class SellerProfileComponent implements OnInit {
 
   getDisplayPrice(product: Product): number {
     return product.offerPrice && product.offerPrice < product.price ? product.offerPrice : product.price;
+  }
+
+  get canReview(): boolean {
+    return Boolean(this.currentUser?.id && this.seller?.userId && this.currentUser.id !== this.seller.userId);
+  }
+
+  getReviewerName(review: SellerReview): string {
+    const firstName = review.reviewer?.firstName || '';
+    const lastName = review.reviewer?.lastName || '';
+    return `${firstName} ${lastName}`.trim() || 'Cliente Mercaclick';
+  }
+
+  isReviewFormValid(): boolean {
+    return this.reviewForm.rating >= 1 && this.reviewForm.rating <= 5 && this.reviewForm.comment.trim().length >= 10;
+  }
+
+  submitReview(): void {
+    if (!this.seller || !this.canReview || !this.isReviewFormValid()) {
+      return;
+    }
+
+    this.reviewSaving = true;
+    this.reviewSuccess = '';
+    this.reviewSubmitError = '';
+
+    this.sellerService.saveSellerReview(this.seller.id, {
+      rating: this.reviewForm.rating,
+      comment: this.reviewForm.comment.trim()
+    }).subscribe({
+      next: (response) => {
+        this.reviewSaving = false;
+        this.reviewSuccess = response.message;
+        this.reviewSummary = response.summary;
+        this.seller = {
+          ...this.seller!,
+          rating: response.summary.averageRating
+        };
+        this.loadReviews(this.seller.id);
+      },
+      error: (err: { error?: { message?: string } }) => {
+        this.reviewSaving = false;
+        this.reviewSubmitError = err.error?.message || 'No se pudo guardar la reseña.';
+      }
+    });
+  }
+
+  private loadReviews(sellerId: string): void {
+    this.reviewsLoading = true;
+    this.reviewsError = '';
+
+    this.sellerService.getSellerReviews(sellerId).subscribe({
+      next: (response) => {
+        this.reviews = response.items;
+        this.reviewSummary = response.summary;
+        this.reviewsLoading = false;
+      },
+      error: () => {
+        this.reviewsError = 'No se pudieron cargar las reseñas del negocio.';
+        this.reviewsLoading = false;
+      }
+    });
   }
 }

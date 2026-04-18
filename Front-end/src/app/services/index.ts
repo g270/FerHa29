@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, finalize, map, of, shareReplay, tap } from 'rxjs';
-import { AppNotification, AuthResponse, CartItem, Category, CreateOrderPayload, CreateServiceRequestPayload, NotificationResponse, Order, Product, Seller, ServiceRequest, UpdateServiceRequestPayload, User } from '../models/models';
+import { AppNotification, AuthResponse, CartItem, Category, CreateOrderPayload, CreateSellerReviewPayload, CreateServiceRequestPayload, NotificationResponse, Order, Product, Seller, SellerReviewListResponse, SellerReviewSaveResponse, ServiceRequest, UpdateServiceRequestPayload, User } from '../models/models';
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -240,6 +240,14 @@ export class SellerService {
 
   updateSeller(id: string, seller: Partial<Seller>): Observable<Seller> {
     return this.http.put<Seller>(`${API_URL}/sellers/${id}`, seller);
+  }
+
+  getSellerReviews(id: string): Observable<SellerReviewListResponse> {
+    return this.http.get<SellerReviewListResponse>(`${API_URL}/sellers/${id}/reviews`);
+  }
+
+  saveSellerReview(id: string, payload: CreateSellerReviewPayload): Observable<SellerReviewSaveResponse> {
+    return this.http.post<SellerReviewSaveResponse>(`${API_URL}/sellers/${id}/reviews`, payload);
   }
 }
 

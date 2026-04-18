@@ -1,6 +1,6 @@
 ﻿import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { Product, Seller, User } from '../../models/models';
+import { Product, Seller, SellerReview, SellerReviewSummary, User } from '../../models/models';
 import { AuthService, ProductService, SellerService } from '../../services/index';
 
 @Component({
@@ -186,8 +186,42 @@ import { AuthService, ProductService, SellerService } from '../../services/index
           </div>
         </div>
         <div *ngIf="activeTab === 'resenas'">
-          <div class="empty-panel card">
-            <p>Las reseñas del negocio se mostrarán aquí cuando la API exponga el historial de opiniones.</p>
+          <div class="review-dashboard-summary" *ngIf="!reviewsLoading && sellerReviewSummary.totalReviews > 0">
+            <article class="summary-tile card">
+              <span>Promedio</span>
+              <strong>⭐ {{ sellerReviewSummary.averageRating }}</strong>
+            </article>
+            <article class="summary-tile card">
+              <span>Total reseñas</span>
+              <strong>{{ sellerReviewSummary.totalReviews }}</strong>
+            </article>
+            <article class="summary-tile card accent-tile">
+              <span>Verificadas</span>
+              <strong>{{ sellerReviewSummary.verifiedReviews }}</strong>
+            </article>
+          </div>
+
+          <div *ngIf="reviewsLoading" class="state">Cargando reseñas...</div>
+          <div *ngIf="reviewsError" class="state error">{{ reviewsError }}</div>
+
+          <div class="review-admin-list" *ngIf="!reviewsLoading && sellerReviews.length > 0">
+            <article class="card review-admin-card" *ngFor="let review of sellerReviews">
+              <div class="review-admin-header">
+                <div>
+                  <strong>{{ getReviewerName(review) }}</strong>
+                  <span>{{ review.createdAt | date:'mediumDate' }}</span>
+                </div>
+                <div class="review-badges">
+                  <span class="badge">⭐ {{ review.rating }}/5</span>
+                  <span class="meta-chip offer-chip" *ngIf="review.isVerifiedTransaction">Verificada</span>
+                </div>
+              </div>
+              <p>{{ review.comment }}</p>
+            </article>
+          </div>
+
+          <div class="empty-panel card" *ngIf="!reviewsLoading && sellerReviews.length === 0">
+            <p>Tu negocio aún no tiene reseñas publicadas.</p>
           </div>
         </div>
       </div>
@@ -209,6 +243,10 @@ export class DashboardComponent implements OnInit {
   savingBusinessProfile = false;
   businessMessage = '';
   businessError = '';
+  sellerReviews: SellerReview[] = [];
+  sellerReviewSummary: SellerReviewSummary = { averageRating: 0, totalReviews: 0, verifiedReviews: 0 };
+  reviewsLoading = false;
+  reviewsError = '';
 
   // Tabs para la vista de negocio
   activeTab: 'productos' | 'servicios' | 'negocio' | 'resenas' = 'productos';
@@ -234,6 +272,7 @@ export class DashboardComponent implements OnInit {
       this.user = cachedUser;
       this.syncBusinessForm();
       this.loadSellerProducts();
+      this.loadSellerReviews();
       this.loading = false;
     }
 
@@ -242,6 +281,7 @@ export class DashboardComponent implements OnInit {
         this.user = profile;
         this.syncBusinessForm();
         this.loadSellerProducts();
+        this.loadSellerReviews();
         this.loading = false;
       },
       error: (err: unknown) => {
@@ -300,6 +340,12 @@ export class DashboardComponent implements OnInit {
 
   getDisplayPrice(product: Product): number {
     return product.offerPrice && product.offerPrice < product.price ? product.offerPrice : product.price;
+  }
+
+  getReviewerName(review: SellerReview): string {
+    const firstName = review.reviewer?.firstName || '';
+    const lastName = review.reviewer?.lastName || '';
+    return `${firstName} ${lastName}`.trim() || 'Cliente Mercaclick';
   }
 
   getActiveCount(tab: 'productos' | 'servicios'): number {
@@ -420,6 +466,29 @@ export class DashboardComponent implements OnInit {
       },
       error: () => {
         this.productsLoading = false;
+      }
+    });
+  }
+
+  private loadSellerReviews(): void {
+    if (!this.user?.sellerProfile?.id || !this.isSeller) {
+      this.sellerReviews = [];
+      this.sellerReviewSummary = { averageRating: 0, totalReviews: 0, verifiedReviews: 0 };
+      return;
+    }
+
+    this.reviewsLoading = true;
+    this.reviewsError = '';
+
+    this.sellerService.getSellerReviews(this.user.sellerProfile.id).subscribe({
+      next: (response) => {
+        this.sellerReviews = response.items;
+        this.sellerReviewSummary = response.summary;
+        this.reviewsLoading = false;
+      },
+      error: () => {
+        this.reviewsLoading = false;
+        this.reviewsError = 'No se pudieron cargar las reseñas del negocio.';
       }
     });
   }

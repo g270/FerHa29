@@ -280,8 +280,55 @@
   color: #067647;
 }
 
+.review-dashboard-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.review-admin-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.review-admin-card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.review-admin-card p {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+.review-admin-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.review-admin-header strong {
+  display: block;
+  color: #111827;
+}
+
+.review-admin-header span {
+  color: #64748b;
+}
+
+.review-badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 @media (max-width: 760px) {
   .product-summary,
+  .review-dashboard-summary,
   .profile-header,
   .product-item {
     grid-template-columns: 1fr;

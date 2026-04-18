@@ -9,6 +9,7 @@ const Order = require('./Order')(sequelize, Sequelize.DataTypes);
 const OrderItem = require('./OrderItem')(sequelize, Sequelize.DataTypes);
 const ServiceRequest = require('./ServiceRequest')(sequelize, Sequelize.DataTypes);
 const Notification = require('./Notification')(sequelize, Sequelize.DataTypes);
+const SellerReview = require('./SellerReview')(sequelize, Sequelize.DataTypes);
 
 User.hasOne(Seller, { foreignKey: 'userId', as: 'sellerProfile' });
 Seller.belongsTo(User, { foreignKey: 'userId', as: 'user' });
@@ -30,6 +31,10 @@ Product.hasMany(ServiceRequest, { foreignKey: 'productId', as: 'serviceRequests'
 ServiceRequest.belongsTo(Product, { foreignKey: 'productId', as: 'product', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
 User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications', onDelete: 'CASCADE', onUpdate: 'CASCADE' });
 Notification.belongsTo(User, { foreignKey: 'userId', as: 'user', onDelete: 'CASCADE', onUpdate: 'CASCADE' });
+Seller.hasMany(SellerReview, { foreignKey: 'sellerId', as: 'reviews', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
+SellerReview.belongsTo(Seller, { foreignKey: 'sellerId', as: 'seller', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
+User.hasMany(SellerReview, { foreignKey: 'userId', as: 'writtenSellerReviews', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
+SellerReview.belongsTo(User, { foreignKey: 'userId', as: 'reviewer', onDelete: 'NO ACTION', onUpdate: 'NO ACTION' });
 
 module.exports = {
   sequelize,
@@ -41,5 +46,6 @@ module.exports = {
   Order,
   OrderItem,
   ServiceRequest,
-  Notification
+  Notification,
+  SellerReview
 };
